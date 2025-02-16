@@ -3,11 +3,13 @@
 #include "hk/hook/Trampoline.h"
 #include "hk/util/Context.h"
 
-#include "nn/socket.h"
-#include "nn/nifm.h"
-#include "game/System/GameSystem.h"
 #include <netdb.h>
 #include <netinet/in.h>
+
+#include <nn/socket.h>
+#include <nn/nifm.h>
+
+#include "game/System/GameSystem.h"
 
 using namespace hk;
 
