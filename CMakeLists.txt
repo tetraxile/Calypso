@@ -21,6 +21,8 @@ include_directories(lib/smo/game)
 include_directories(lib/smo/NintendoSDK)
 include_directories(lib/smo/sead)
 
+include_directories(src)
+
 include(sys/cmake/module.cmake)
 include(sys/cmake/deploy.cmake)
 include(sys/cmake/sail.cmake)
