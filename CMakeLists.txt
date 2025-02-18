@@ -12,6 +12,9 @@ file(GLOB_RECURSE SOURCES_CXX ${PROJECT_SOURCE_DIR}/src/*.cpp)
 set(SOURCES ${SOURCES_ASM} ${SOURCES_C} ${SOURCES_CXX})
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+include_directories(lib/custom/sead)
+include_directories(lib/custom)
+
 include_directories(lib/smo)
 include_directories(lib/smo/aarch64)
 include_directories(lib/smo/agl)

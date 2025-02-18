@@ -1,3 +1,6 @@
 @smo:100
 
 _ZN10GameSystem4initEv
+_ZN10GameSystem8drawMainEv
+_ZN2al11isExistFileERKN4sead14SafeStringBaseIcEE
+_ZN11Application9sInstanceE

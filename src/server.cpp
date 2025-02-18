@@ -32,13 +32,13 @@ void Server::init() {
 }
 
 s32 Server::connect(const char* serverIP, u16 port) {
+    if (mState == State::CONNECTED) return 0;
+    
     in_addr hostAddress = {0};
     sockaddr_in serverAddr = {0};
     
     // create socket
-    if ((mSockFd = nn::socket::Socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        HK_ABORT("socket ctor failed", 0);
-    }
+    if ((mSockFd = nn::socket::Socket(AF_INET, SOCK_STREAM, 0)) < 0) return nn::socket::GetLastErrno();
 
     // configure server to connect to
     nn::socket::InetAton(serverIP, &hostAddress);
@@ -48,14 +48,27 @@ s32 Server::connect(const char* serverIP, u16 port) {
 
     // connect to server
     nn::Result result = nn::socket::Connect(mSockFd, (sockaddr*)&serverAddr, sizeof(serverAddr));
-    s32 r = nn::socket::GetLastErrno();
-    const char* s = strerror(r);
-    HK_ABORT_UNLESS(result.IsSuccess(), "connect failed (%s)", s);
+    if (result.IsFailure()) return nn::socket::GetLastErrno();
+
+    mState = State::CONNECTED;
 
     // send message to server
     char message[0x400] = "hi";
-    r = nn::socket::Send(mSockFd, message, strlen(message), 0);
-    HK_ABORT_UNLESS(r > -1, "send failed", 0);
+    s32 r = nn::socket::Send(mSockFd, message, strlen(message), 0);
+    if (r < 0) return nn::socket::GetLastErrno();
 
     return 0;
 }
+
+// void Server::log(const char *fmt, ...) {
+//     va_list args;
+//     va_start(args, fmt);
+
+//     char message[0x400];
+//     snprintf(message, sizeof(message), fmt, args);
+
+//     Server& server = instance();
+//     s32 r = nn::socket::Send(server.mSockFd, message, strlen(message), 0);
+
+//     va_end(args);
+// }
