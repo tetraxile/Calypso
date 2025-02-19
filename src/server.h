@@ -2,27 +2,36 @@
 #define SERVER_H
 
 #include <basis/seadTypes.h>
+#include <heap/seadExpHeap.h>
+
+#include <nn/os.h>
+
+#include "al/Library/Thread/AsyncFunctorThread.h"
 
 class Server {
+    SEAD_SINGLETON_DISPOSER(Server);
+
 private:
     enum class State {
+        UNINITIALIZED,
         DISCONNECTED,
-        CONNECTING,
         CONNECTED,
     };
 
+    sead::Heap* mHeap = nullptr;
+    al::AsyncFunctorThread* mRecvThread = nullptr;
+    void* mThreadStack = nullptr;
     s32 mSockFd = -1;
-    State mState = State::DISCONNECTED;
+    State mState = State::UNINITIALIZED;
 
 public:
-    static Server& instance() {
-        static Server s;
-        return s;
-    }
+    Server() = default;
 
-    void init();
+    void init(sead::Heap* heap);
+    void threadFunc();
     s32 connect(const char* serverIP, u16 port);
 
+    static sead::Heap* initializeHeap();
     static void log(const char* fmt, ...);
 };
 

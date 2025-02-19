@@ -1,14 +1,21 @@
 #include "server.h"
 
+#include "heap/seadDisposer.h"
 #include "hk/diag/diag.h"
 #include "hk/hook/Trampoline.h"
 
+#include <cstdio>
+#include <cstdlib>
 #include <netdb.h>
 #include <netinet/in.h>
 
-#include <nn/socket.h>
-#include <nn/nifm.h>
+#include <heap/seadHeap.h>
+#include <heap/seadHeapMgr.h>
 
+#include <nn/nifm.h>
+#include <nn/socket.h>
+
+#include "al/Library/Memory/HeapUtil.h"
 
 static constexpr int poolSize = 0x600000;
 static constexpr int allocPoolSize = 0x20000;
@@ -16,7 +23,20 @@ char socketPool[poolSize + allocPoolSize] __attribute__((aligned(0x1000)));
 
 HkTrampoline<void> disableSocketInit = hk::hook::trampoline([]() -> void {});
 
-void Server::init() {
+SEAD_SINGLETON_DISPOSER_IMPL(Server);
+
+sead::Heap* Server::initializeHeap() {
+    return sead::ExpHeap::create(0x100000, "ClientHeap", al::getStationedHeap(), 8, sead::Heap::cHeapDirection_Forward, false);
+}
+
+void Server::init(sead::Heap* heap) {
+    mHeap = heap;
+
+    sead::ScopedCurrentHeapSetter heapSetter(mHeap);
+
+    al::FunctorV0M functor(this, &Server::threadFunc);
+    mRecvThread = new al::AsyncFunctorThread("Recv Thread", functor, 0, 0x20000, {});
+
     nn::Result result = nn::nifm::Initialize();
     HK_ABORT_UNLESS(result.IsSuccess(), "nifm init failed", 0);
     
@@ -29,6 +49,10 @@ void Server::init() {
     }
 
     disableSocketInit.installAtSym<"_ZN2nn6socket10InitializeEPvmmi">();
+}
+
+void Server::threadFunc() {
+    Server::log("thread\n");
 }
 
 s32 Server::connect(const char* serverIP, u16 port) {
@@ -53,22 +77,24 @@ s32 Server::connect(const char* serverIP, u16 port) {
     mState = State::CONNECTED;
 
     // send message to server
-    char message[0x400] = "hi";
+    char message[] = "connected!";
     s32 r = nn::socket::Send(mSockFd, message, strlen(message), 0);
     if (r < 0) return nn::socket::GetLastErrno();
+
+    mRecvThread->start();
 
     return 0;
 }
 
-// void Server::log(const char *fmt, ...) {
-//     va_list args;
-//     va_start(args, fmt);
+void Server::log(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
 
-//     char message[0x400];
-//     snprintf(message, sizeof(message), fmt, args);
+    char message[0x400];
+    snprintf(message, sizeof(message), fmt, args);
 
-//     Server& server = instance();
-//     s32 r = nn::socket::Send(server.mSockFd, message, strlen(message), 0);
+    Server* server = instance();
+    s32 r = nn::socket::Send(server->mSockFd, message, strlen(message), 0);
 
-//     va_end(args);
-// }
+    va_end(args);
+}

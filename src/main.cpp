@@ -1,10 +1,13 @@
+#include "Library/Memory/HeapUtil.h"
 #include "hk/Result.h"
 #include "hk/diag/diag.h"
 #include "hk/hook/Trampoline.h"
 #include "hk/util/Context.h"
 
-#include <agl/common/aglDrawContext.h>
 #include <cstdio>
+
+#include <agl/common/aglDrawContext.h>
+
 #include <gfx/nvn/seadDebugFontMgrNvn.h>
 #include <gfx/seadTextWriter.h>
 #include <gfx/seadViewport.h>
@@ -52,13 +55,14 @@ void initTextWriter() {
     gTextWriter->mColor = { 0.5f, 0.5f, 0.5f, 1.0f };
 }
 
-static char menu[0x400];
+char menu[0x400];
 
 HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
     initTextWriter();
 
-    Server& server = Server::instance();
-    server.init();
+    sead::Heap* heap = Server::initializeHeap();
+    Server* server = Server::createInstance(heap);
+    server->init(heap);
 
     memset(menu, 0, sizeof(menu));
 
@@ -74,8 +78,8 @@ HkTrampoline<void, GameSystem*> drawMainLoop = hk::hook::trampoline([](GameSyste
     gTextWriter->setScaleFromFontHeight(20.f);
 
     if (al::isPadTriggerLeft(-1)) {
-        Server& server = Server::instance();
-        s32 r = server.connect("192.168.1.16", 8171);
+        Server* server = Server::instance();
+        s32 r = server->connect("192.168.1.16", 8171);
         if (r != 0)
             snprintf(menu, sizeof(menu), "Connection error: %s\n", strerror(r));
     }
