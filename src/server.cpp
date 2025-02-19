@@ -15,19 +15,15 @@
 #include <nn/nifm.h>
 #include <nn/socket.h>
 
-#include "al/Library/Memory/HeapUtil.h"
-
-static constexpr int poolSize = 0x600000;
-static constexpr int allocPoolSize = 0x20000;
-char socketPool[poolSize + allocPoolSize] __attribute__((aligned(0x1000)));
-
 HkTrampoline<void> disableSocketInit = hk::hook::trampoline([]() -> void {});
 
-SEAD_SINGLETON_DISPOSER_IMPL(Server);
+static constexpr int socketPoolSize = 0x600000;
+static constexpr int socketAllocPoolSize = 0x20000;
+char socketPool[socketPoolSize + socketAllocPoolSize] __attribute__((aligned(0x1000)));
 
-sead::Heap* Server::initializeHeap() {
-    return sead::ExpHeap::create(0x100000, "ClientHeap", al::getStationedHeap(), 8, sead::Heap::cHeapDirection_Forward, false);
-}
+namespace tas {
+
+SEAD_SINGLETON_DISPOSER_IMPL(Server);
 
 void Server::init(sead::Heap* heap) {
     mHeap = heap;
@@ -40,7 +36,7 @@ void Server::init(sead::Heap* heap) {
     nn::Result result = nn::nifm::Initialize();
     HK_ABORT_UNLESS(result.IsSuccess(), "nifm init failed", 0);
     
-    result = nn::socket::Initialize(socketPool, poolSize, allocPoolSize, 0xE);
+    result = nn::socket::Initialize(socketPool, socketPoolSize, socketAllocPoolSize, 0xE);
 
     nn::nifm::SubmitNetworkRequestAndWait();
 
@@ -98,3 +94,5 @@ void Server::log(const char *fmt, ...) {
 
     va_end(args);
 }
+
+}  // namespace tas

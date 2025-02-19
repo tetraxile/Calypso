@@ -8,6 +8,8 @@
 
 #include "al/Library/Thread/AsyncFunctorThread.h"
 
+namespace tas {
+
 class Server {
     SEAD_SINGLETON_DISPOSER(Server);
 
@@ -31,8 +33,9 @@ public:
     void threadFunc();
     s32 connect(const char* serverIP, u16 port);
 
-    static sead::Heap* initializeHeap();
     static void log(const char* fmt, ...);
 };
+
+}
 
 #endif
