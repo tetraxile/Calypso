@@ -150,8 +150,6 @@ void Menu::navigate(const sead::Vector2i& navDir) {
     s32 nearestDist = 0;
     s32 nearestPerpDist = 0;
     
-    char buf[128];
-    memset(buf, 0, sizeof(buf));
     for (auto& item : mItems) {
         if (&item == mSelectedItem) continue;
 
