@@ -12,47 +12,57 @@ class Menu;
 
 class MenuItem {
 private:
-    sead::Vector2f mPos;
-    sead::FixedSafeString<128> mText;
-    s32 mIdx;
+    Menu* mMenu = nullptr;
+    sead::Vector2i mPos = sead::Vector2i::zero;
+    sead::FixedSafeString<128> mText = sead::SafeString::cEmptyString;
 
 public:
-    MenuItem(const sead::Vector2f& pos, const sead::SafeString& text, s32 idx);
-    void draw(Menu* menu, s32 cursorIdx) const;
+    MenuItem(Menu* menu, const sead::Vector2i& pos, const sead::SafeString& text);
+    void draw(const sead::Color4f& color) const;
+    void draw() const;
+
+    friend class Menu;
 };
 
 class Menu {
     SEAD_SINGLETON_DISPOSER(Menu);
 
 private:
+    constexpr static s32 cMenuItemNumMax = 128;
+
     sead::Heap* mHeap = nullptr;
     sead::TextWriter* mTextWriter = nullptr;
 
-    sead::Color4f mFgColor = { 1.0f, 1.0f, 1.0f, 0.9f };
-    sead::Color4f mBgColor = { 0.0f, 0.0f, 0.0f, 0.0f };
+    sead::Color4f mFgColor = { 0.6f, 0.6f, 0.6f, 0.9f };
+    sead::Color4f mSelectedColor = { 1.0f, 1.0f, 1.0f, 0.9f };
+    sead::Color4f mBgColor = { 0.0f, 0.0f, 0.0f, 0.5f };
     f32 mShadowOffset = 2.0f;
     f32 mFontHeight = 20.0f;
+    sead::Vector2f mCellDimension = { 100.0f, mFontHeight };
 
     sead::PtrArray<MenuItem> mItems;
-    s32 mCursorIdx = 0;
+    MenuItem* mSelectedItem = nullptr;
     bool mIsActive = true;
 
-    constexpr static s32 cMenuItemNumMax = 128;
+    void select(MenuItem* item) { mSelectedItem = item; }
 
 public:
+    static void initFontMgr();
+
     Menu() = default;
     void init(sead::Heap* heap);
-    void addItem(const sead::Vector2f& pos, const sead::SafeString& text);
+    MenuItem* addItem(const sead::Vector2i& pos, const sead::SafeString& text);
 
     void draw();
     void handleInput(s32 port);
-    void printf(const sead::Vector2f& pos, const char* fmt, ...);
+    void printf(const sead::Vector2i& pos, const sead::Color4f& color, const char* fmt, ...);
+    void printf(const sead::Vector2i& pos, const char* fmt, ...);
     void navigate(const sead::Vector2i& navDir);
     void activateItem();
 
     bool isActive() const { return mIsActive; }
 
-    static void initFontMgr();
+    friend class MenuItem;
 };
 
 }

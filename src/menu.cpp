@@ -65,8 +65,11 @@ void Menu::init(sead::Heap* heap) {
     mItems = sead::PtrArray<MenuItem>();
     mItems.tryAllocBuffer(cMenuItemNumMax, heap);
 
-    for (s32 i = 0; i < 5; i++) {
-        addItem({ 10.0f, 500.0f + i * mFontHeight }, "item");
+    mSelectedItem = addItem({ 0, 19 }, "item");
+    for (s32 x = 0; x < 3; x++) {
+        for (s32 y = 0; y < 5; y++) {
+            addItem({ x, 20 + y }, "item");
+        }
     }
 }
 
@@ -90,15 +93,8 @@ void Menu::draw() {
     mTextWriter->setScaleFromFontHeight(mFontHeight);
 
     for (auto& item : mItems) {
-        item.draw(this, mCursorIdx);
+        item.draw();
     }
-
-    auto* mgr = sead::ControllerMgr::instance();
-    s32 port = al::getMainControllerPort();
-    f32 y = 100.0f;
-    printf({ 200.0f, y }, "%s", al::isValidReplayController(port) ? "valid" : "invalid");
-
-    printf({ 10.0f, 10.0f }, "%d", mCursorIdx);
 
     // if (al::isPadTriggerLeft(-1)) {
     //     tas::Server* server = tas::Server::instance();
@@ -110,53 +106,88 @@ void Menu::draw() {
     mTextWriter->endDraw();
 }
 
-void Menu::printf(const sead::Vector2f& pos, const char* fmt, ...) {
+void Menu::printf(const sead::Vector2i& pos, const sead::Color4f& color, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
+
+    sead::Vector2f printPos = sead::Vector2f::zero;
+    printPos.x = pos.x * mCellDimension.x;
+    printPos.y = pos.y * mCellDimension.y;
 
     char buf[128];
     vsnprintf(buf, sizeof(buf), fmt, args);
 
     // drop shadow
-    mTextWriter->mColor = { 0.0f, 0.0f, 0.0f, mFgColor.a };
-    mTextWriter->setCursorFromTopLeft(pos + sead::Vector2f(mShadowOffset, mShadowOffset));
+    mTextWriter->mColor = { 0.0f, 0.0f, 0.0f, color.a };
+    mTextWriter->setCursorFromTopLeft(printPos + sead::Vector2f(mShadowOffset, mShadowOffset));
     mTextWriter->printImpl_(buf, -1, true, nullptr);
 
     // text
-    mTextWriter->mColor = mFgColor;
-    mTextWriter->setCursorFromTopLeft(pos);
+    mTextWriter->mColor = color;
+    mTextWriter->setCursorFromTopLeft(printPos);
     mTextWriter->printImpl_(buf, -1, true, nullptr);
 
     va_end(args);
 }
 
-void Menu::addItem(const sead::Vector2f& pos, const sead::SafeString& text) {
-    MenuItem* item = new MenuItem(pos, text, mItems.size());
+void Menu::printf(const sead::Vector2i& pos, const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    printf(pos, mFgColor, fmt, args);
+
+    va_end(args);
+}
+
+MenuItem* Menu::addItem(const sead::Vector2i& pos, const sead::SafeString& text) {
+    MenuItem* item = new MenuItem(this, pos, text);
     mItems.pushBack(item);
+    return item;
 }
 
 void Menu::navigate(const sead::Vector2i& navDir) {
-    mCursorIdx += navDir.y;
+    MenuItem* nearestItem = nullptr;
+    s32 nearestDist = 0;
+    s32 nearestPerpDist = 0;
+    
+    char buf[128];
+    memset(buf, 0, sizeof(buf));
+    for (auto& item : mItems) {
+        if (&item == mSelectedItem) continue;
 
-    mCursorIdx += mItems.size();
-    mCursorIdx %= mItems.size();
+        sead::Vector2i distance = item.mPos - mSelectedItem->mPos;
+        s32 navDistance = navDir.x ? distance.x * navDir.x : distance.y * navDir.y;
+        s32 perpDistance = sead::Mathf::abs(navDir.y ? distance.x : distance.y);
+        if (navDistance > 0 && (!nearestItem || perpDistance < nearestPerpDist || (navDistance < nearestDist && perpDistance == nearestPerpDist))) {
+            nearestItem = &item;
+            nearestDist = navDistance;
+            nearestPerpDist = perpDistance;
+        }
+    }
+
+    if (nearestItem)
+        select(nearestItem);
 }
 
 void Menu::activateItem() {
 
 }
 
-MenuItem::MenuItem(const sead::Vector2f& pos, const sead::SafeString& text, s32 idx) {
+MenuItem::MenuItem(Menu* menu, const sead::Vector2i& pos, const sead::SafeString& text) {
     mPos = pos;
     mText = text;
-    mIdx = idx;
+    mMenu = menu;
 }
 
-void MenuItem::draw(Menu* menu, s32 cursorIdx) const {
-    if (mIdx == cursorIdx)
-        menu->printf(mPos, ">%s", mText.cstr());
+void MenuItem::draw(const sead::Color4f& color) const {
+    mMenu->printf(mPos, color, "%s", mText.cstr());
+}
+
+void MenuItem::draw() const {
+    if (this == mMenu->mSelectedItem)
+        mMenu->printf(mPos, mMenu->mSelectedColor, ">%s", mText.cstr());
     else
-        menu->printf(mPos, " %s", mText.cstr());
+        mMenu->printf(mPos, mMenu->mFgColor, " %s", mText.cstr());
 }
 
 }
