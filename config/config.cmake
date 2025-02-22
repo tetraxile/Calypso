@@ -5,7 +5,7 @@ set(OPTIMIZE_OPTIONS_DEBUG -O2 -gdwarf-4)
 set(OPTIMIZE_OPTIONS_RELEASE -O3 -ffast-math -flto)
 set(WARN_OPTIONS -Werror=return-type)
 
-set(DEFINITIONS "")
+set(DEFINITIONS "-DSEAD_RTTI_SOURCE_DYNAMIC")
 set(INCLUDES lib)
 
 set(ASM_OPTIONS "")

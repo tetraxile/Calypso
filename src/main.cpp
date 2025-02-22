@@ -5,11 +5,17 @@
 
 #include <agl/common/aglDrawContext.h>
 
+#include <controller/seadControllerAddon.h>
+#include <controller/seadControllerMgr.h>
 #include <gfx/seadTextWriter.h>
 #include <gfx/seadViewport.h>
 #include <heap/seadHeap.h>
 #include <heap/seadHeapMgr.h>
+#include <math/seadVector.h>
 
+#include "al/Library/Controller/InputFunction.h"
+#include "al/Library/Controller/NpadController.h"
+#include "al/Library/Controller/PadReplayFunction.h"
 #include "al/Library/Memory/HeapUtil.h"
 
 #include "game/System/GameSystem.h"
@@ -38,14 +44,30 @@ HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSys
 });
 
 
-HkTrampoline<void, GameSystem*> drawMainLoop = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
-    drawMainLoop.orig(gameSystem);
+HkTrampoline<void, GameSystem*> drawMainHook = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
+    drawMainHook.orig(gameSystem);
 
     tas::Menu::instance()->draw();
 });
 
+HkTrampoline<void, sead::ControllerMgr*> inputHook = hk::hook::trampoline([](sead::ControllerMgr* mgr) -> void {
+    s32 port = al::getMainControllerPort();
+
+    inputHook.orig(mgr);
+
+    tas::Menu* menu = tas::Menu::instance();
+    if (menu) menu->handleInput(port);
+});
+
+// HkTrampoline<void, sead::Vector2f*, const al::CameraPoser*> cameraRotateHook = hk::hook::trampoline([](sead::Vector2f* out, const al::CameraPoser* poser) -> void {
+//     out->x = 0.0f;
+//     out->y = 0.0f;
+// });
+
 extern "C" void hkMain() {
     gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
 
-    drawMainLoop.installAtSym<"_ZN10GameSystem8drawMainEv">();
+    drawMainHook.installAtSym<"_ZN10GameSystem8drawMainEv">();
+
+    inputHook.installAtSym<"_ZN4sead13ControllerMgr4calcEv">();
 }
