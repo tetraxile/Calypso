@@ -1,9 +1,10 @@
 #ifndef MENU_H
 #define MENU_H
 
-#include <gfx/seadTextWriter.h>
-#include <heap/seadDisposer.h>
 #include <container/seadPtrArray.h>
+#include <gfx/seadTextWriter.h>
+#include <gfx/seadPrimitiveRenderer.h>
+#include <heap/seadDisposer.h>
 #include <prim/seadSafeString.h>
 
 namespace tas {
@@ -32,10 +33,12 @@ private:
 
     sead::Heap* mHeap = nullptr;
     sead::TextWriter* mTextWriter = nullptr;
+    sead::PrimitiveDrawer* mDrawer = nullptr;
 
-    sead::Color4f mFgColor = { 0.6f, 0.6f, 0.6f, 0.9f };
-    sead::Color4f mSelectedColor = { 1.0f, 1.0f, 1.0f, 0.9f };
-    sead::Color4f mBgColor = { 0.0f, 0.0f, 0.0f, 0.5f };
+    sead::Color4f mFgColor = { 0.6f, 0.6f, 0.6f, 0.8f };
+    sead::Color4f mSelectedColor = { 1.0f, 1.0f, 1.0f, 0.8f };
+    sead::Color4f mBgColor0 = { 0.9f, 0.9f, 0.9f, 0.8f };
+    sead::Color4f mBgColor1 = { 0.4f, 0.4f, 0.4f, 0.8f };
     f32 mShadowOffset = 2.0f;
     f32 mFontHeight = 20.0f;
     sead::Vector2f mCellDimension = { 100.0f, mFontHeight };
@@ -44,7 +47,14 @@ private:
     MenuItem* mSelectedItem = nullptr;
     bool mIsActive = true;
 
+    sead::Vector2f cellPosToAbsolute(const sead::Vector2i& cellPos) {
+        return { cellPos.x * mCellDimension.x, cellPos.y * mCellDimension.y };
+    }
+
     void select(MenuItem* item) { mSelectedItem = item; }
+    void drawQuad(const sead::Vector2f& pos, const sead::Vector2f& size, const sead::Color4f& color0, const sead::Color4f& color1);
+    void drawCellBackground(const sead::Vector2i& pos, bool isSelected);
+
 
 public:
     static void initFontMgr();

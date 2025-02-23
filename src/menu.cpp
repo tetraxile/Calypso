@@ -13,8 +13,10 @@
 #include <controller/seadControllerMgr.h>
 #include <controller/seadControllerWrapper.h>
 #include <gfx/nvn/seadDebugFontMgrNvn.h>
-#include <gfx/seadViewport.h>
+#include <gfx/seadOrthoProjection.h>
+#include <gfx/seadPrimitiveRenderer.h>
 #include <gfx/seadTextWriter.h>
+#include <gfx/seadViewport.h>
 #include <heap/seadHeapMgr.h>
 #include <prim/seadRuntimeTypeInfo.h>
 
@@ -25,6 +27,7 @@
 #include "al/Library/System/GameSystemInfo.h"
 
 #include "game/System/Application.h"
+#include "gfx/seadCamera.h"
 
 constexpr static char DBG_FONT_PATH[] = "DebugData/Font/nvn_font_jis1.ntx";
 constexpr static char DBG_SHADER_PATH[] = "DebugData/Font/nvn_font_shader_jis1.bin";
@@ -60,6 +63,7 @@ void Menu::init(sead::Heap* heap) {
 
     mTextWriter = new sead::TextWriter(context, viewport);
     mTextWriter->setupGraphics(context);
+    mTextWriter->setScaleFromFontHeight(mFontHeight);
     mTextWriter->mColor = mFgColor;
 
     mItems = sead::PtrArray<MenuItem>();
@@ -71,6 +75,14 @@ void Menu::init(sead::Heap* heap) {
             addItem({ x, 20 + y }, "item");
         }
     }
+
+    auto* projection = new sead::OrthoProjection;
+    projection->setByViewport(*viewport);
+    auto* camera = new sead::OrthoCamera(*projection);
+
+    mDrawer = new sead::PrimitiveDrawer(context);
+    mDrawer->setCamera(camera);
+    mDrawer->setProjection(projection);
 }
 
 void Menu::handleInput(s32 port) {
@@ -88,10 +100,20 @@ void Menu::handleInput(s32 port) {
         activateItem();
 }
 
-void Menu::draw() {
-    mTextWriter->beginDraw();
-    mTextWriter->setScaleFromFontHeight(mFontHeight);
+void Menu::drawQuad(const sead::Vector2f& tl, const sead::Vector2f& size, const sead::Color4f& color0, const sead::Color4f& color1) {
+    sead::Vector2f screen(1280.0f, 720.0f);
+    sead::Vector3f pos(-screen.x / 2 + size.x / 2 + tl.x, screen.y / 2 - size.y / 2 - tl.y, 0.0f);
+    mDrawer->begin();
+    mDrawer->drawQuad({ pos, size, color0, color1 });
+    mDrawer->end();
+}
 
+void Menu::drawCellBackground(const sead::Vector2i& pos, bool isSelected) {
+    f32 shade = isSelected ? 1.0f : 0.5f;
+    drawQuad(cellPosToAbsolute(pos), mCellDimension - sead::Vector2f(1.0f, 1.0f), mBgColor0 * shade, mBgColor1 * shade);
+}
+
+void Menu::draw() {
     for (auto& item : mItems) {
         item.draw();
     }
@@ -102,20 +124,18 @@ void Menu::draw() {
     //     if (r != 0)
     //         printf({ 10.0f, 10.0f }, "Connection error: %s\n", strerror(r));
     // }
-
-    mTextWriter->endDraw();
 }
 
 void Menu::printf(const sead::Vector2i& pos, const sead::Color4f& color, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
 
-    sead::Vector2f printPos = sead::Vector2f::zero;
-    printPos.x = pos.x * mCellDimension.x;
-    printPos.y = pos.y * mCellDimension.y;
+    sead::Vector2f printPos = cellPosToAbsolute(pos);
 
     char buf[128];
     vsnprintf(buf, sizeof(buf), fmt, args);
+
+    mTextWriter->beginDraw();
 
     // drop shadow
     mTextWriter->mColor = { 0.0f, 0.0f, 0.0f, color.a };
@@ -126,6 +146,8 @@ void Menu::printf(const sead::Vector2i& pos, const sead::Color4f& color, const c
     mTextWriter->mColor = color;
     mTextWriter->setCursorFromTopLeft(printPos);
     mTextWriter->printImpl_(buf, -1, true, nullptr);
+
+    mTextWriter->endDraw();
 
     va_end(args);
 }
@@ -178,14 +200,18 @@ MenuItem::MenuItem(Menu* menu, const sead::Vector2i& pos, const sead::SafeString
 }
 
 void MenuItem::draw(const sead::Color4f& color) const {
+    mMenu->drawCellBackground(mPos, this == mMenu->mSelectedItem);
     mMenu->printf(mPos, color, "%s", mText.cstr());
 }
 
 void MenuItem::draw() const {
-    if (this == mMenu->mSelectedItem)
+    if (this == mMenu->mSelectedItem) {
+        mMenu->drawCellBackground(mPos, true);
         mMenu->printf(mPos, mMenu->mSelectedColor, ">%s", mText.cstr());
-    else
+    } else {
+        mMenu->drawCellBackground(mPos, false);
         mMenu->printf(mPos, mMenu->mFgColor, " %s", mText.cstr());
+    }
 }
 
 }

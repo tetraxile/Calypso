@@ -1,0 +1,30 @@
+[-] net
+  [-] server -> switch (8171)
+    [x] make connection
+    [ ] implement TCP packets
+    [ ] send STAS packets to client
+    [ ] start/stop script from server as well as from debug menu
+
+  [ ] server -> browser (8172)
+    [ ] send browser button presses to server
+
+[-] make debug menu
+  [x] design
+    [x] navigation
+    [x] cell-based
+    [x] background
+  [ ] add server connection dialog
+    [ ] save server IP to local file
+  [ ] toasts/notifications? log?
+  [ ] other visualizers? e.g. hitsensors
+
+[ ] savestates (part of script format? or just game save files as part of format?)
+  [ ] position, rotation, animation, camera state, 
+  [ ] assign a frame index of script to the savestate
+  [ ] allow selecting objects to save
+
+[ ] camera independent scripts (i.e. freecam during script execution)
+
+[ ] test on all game versions
+
+[ ] https://docs.google.com/document/d/1WEUSplw2VunYwyJE07FEZibBdUeb4LYs5hHu7LoLDF0
