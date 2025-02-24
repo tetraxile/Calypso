@@ -5,8 +5,11 @@
     [ ] send STAS packets to client
     [ ] start/stop script from server as well as from debug menu
 
-  [ ] server -> browser (8172, 8173)
+  [-] server -> browser (8172: http, 8173: ws)
     [x] send browser button presses to server
+    [x] host html locally
+    [ ] different packet types
+    [ ] send scripts from browser to server
 
 [-] make debug menu
   [x] design
