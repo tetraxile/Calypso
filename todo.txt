@@ -5,14 +5,15 @@
     [ ] send STAS packets to client
     [ ] start/stop script from server as well as from debug menu
 
-  [ ] server -> browser (8172)
-    [ ] send browser button presses to server
+  [ ] server -> browser (8172, 8173)
+    [x] send browser button presses to server
 
 [-] make debug menu
   [x] design
     [x] navigation
     [x] cell-based
     [x] background
+  [ ] support adding different types of cells / submenus
   [ ] add server connection dialog
     [ ] save server IP to local file
   [ ] toasts/notifications? log?

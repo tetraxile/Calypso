@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 
-import argparse
 import socket
 import threading
 from queue import Queue
+from websockets.sync.server import serve, ServerConnection
+from websockets.exceptions import ConnectionClosedOK
+# from http.server import SimpleHTTPRequestHandler
 
-from http.server import SimpleHTTPRequestHandler
+
+SWITCH_PORT = 8171
+WS_PORT = 8173
+
+# TODO: remove
+_print = print
+print = None
 
 
-def port_parser(value: str) -> int:
-    ivalue = int(value)
-    if ivalue not in range(0, 65536):
-        raise argparse.ArgumentTypeError("port must be in range [0, 65535]")
-    return ivalue
+def log(user: str, message: str):
+    _print(f"[{user}] {message}")
 
 
 def send_func(client_sock: socket.socket, stop):
@@ -23,27 +28,43 @@ def send_func(client_sock: socket.socket, stop):
         pass
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--port", help="[default: 8171]", type=port_parser, default="8171")
+def ws_func():
+    with serve(handler, "localhost", WS_PORT) as server:
+        server.serve_forever()
 
-    args = parser.parse_args()
+
+def handler(websocket: ServerConnection):
+    log("ws", f"received connection from client {websocket.id}")
+
+    while True:
+        try:
+            message = websocket.recv(decode=False)
+        except ConnectionClosedOK:
+            log("ws", "client closed connection")
+            break
+        log("ws", f"client said: {message}")
+
+
+def main():
+    # create websocket thread
+    ws_thread = threading.Thread(target=ws_func, args=())
+    ws_thread.start()
 
     # create socket
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     # bind socket to specified port
-    server_address = ("0.0.0.0", args.port)
+    server_address = ("0.0.0.0", SWITCH_PORT)
     server_sock.bind(server_address)
 
     # start listening on socket
     server_sock.listen(2)
 
     while True:
-        print("waiting for connection...")
+        log("switch", "waiting for connection...")
         client_sock, client_addr = server_sock.accept()
-        print(f"connection from {client_addr}")
+        log("switch", f"connection from {client_addr}")
 
         # create thread
         # msg_queue = Queue()
@@ -55,19 +76,19 @@ def main():
         try:
             while True:
                 data = client_sock.recv(1024).decode("ascii")
-                print(f"received {len(data)} bytes")
+                log("switch", f"received {len(data)} bytes")
                 if not data:
                     break
 
-                print(f"{client_addr} -> {data}")
+                log("switch", f"{client_addr} -> {data}")
                 # while not msg_queue.empty():
                 #     client_sock.send(msg_queue.get())
 
         finally:
-            print("client disconnected")
+            log("switch", "client disconnected")
             stop_thread = True
             send_thread.join()
-            print("send thread terminated")
+            log("switch", "send thread terminated")
             client_sock.close()
 
 
@@ -75,4 +96,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("exiting...")
+        log("all", "exiting...")

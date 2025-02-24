@@ -13,12 +13,15 @@ class Menu;
 
 class MenuItem {
 private:
+    using ActivateFunc = void (*)();
+
     Menu* mMenu = nullptr;
     sead::Vector2i mPos = sead::Vector2i::zero;
     sead::FixedSafeString<128> mText = sead::SafeString::cEmptyString;
+    ActivateFunc mActivateFunc = nullptr;
 
 public:
-    MenuItem(Menu* menu, const sead::Vector2i& pos, const sead::SafeString& text);
+    MenuItem(Menu* menu, const sead::Vector2i& pos, const sead::SafeString& text, ActivateFunc activateFunc = nullptr);
     void draw(const sead::Color4f& color) const;
     void draw() const;
 
@@ -29,6 +32,8 @@ class Menu {
     SEAD_SINGLETON_DISPOSER(Menu);
 
 private:
+    using ActivateFunc = void (*)();
+
     constexpr static s32 cMenuItemNumMax = 128;
 
     sead::Heap* mHeap = nullptr;
@@ -61,7 +66,7 @@ public:
 
     Menu() = default;
     void init(sead::Heap* heap);
-    MenuItem* addItem(const sead::Vector2i& pos, const sead::SafeString& text);
+    MenuItem* addItem(const sead::Vector2i& pos, const sead::SafeString& text, ActivateFunc activateFunc = nullptr);
 
     void draw();
     void handleInput(s32 port);

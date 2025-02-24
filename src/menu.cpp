@@ -1,4 +1,5 @@
 #include "menu.h"
+#include "server.h"
 
 #include <hk/diag/diag.h>
 #include <hk/util/Context.h>
@@ -29,8 +30,8 @@
 #include "game/System/Application.h"
 #include "gfx/seadCamera.h"
 
-constexpr static char DBG_FONT_PATH[] = "DebugData/Font/nvn_font_jis1.ntx";
 constexpr static char DBG_SHADER_PATH[] = "DebugData/Font/nvn_font_shader_jis1.bin";
+constexpr static char DBG_FONT_PATH[] = "DebugData/Font/nvn_font_jis1.ntx";
 constexpr static char DBG_TBL_PATH[] = "DebugData/Font/nvn_font_jis1_tbl.bin";
 
 namespace tas {
@@ -69,7 +70,13 @@ void Menu::init(sead::Heap* heap) {
     mItems = sead::PtrArray<MenuItem>();
     mItems.tryAllocBuffer(cMenuItemNumMax, heap);
 
-    mSelectedItem = addItem({ 0, 19 }, "item");
+    mSelectedItem = addItem({ 0, 19 }, "connect", []() -> void {
+        tas::Server* server = tas::Server::instance();
+        tas::Menu* menu = tas::Menu::instance();
+        s32 r = server->connect("192.168.1.16", 8171);
+        // if (r != 0)
+        //     menu->printf({ 5, 30 }, "Connection error: %s\n", strerror(r));
+    });
     for (s32 x = 0; x < 3; x++) {
         for (s32 y = 0; y < 5; y++) {
             addItem({ x, 20 + y }, "item");
@@ -117,13 +124,6 @@ void Menu::draw() {
     for (auto& item : mItems) {
         item.draw();
     }
-
-    // if (al::isPadTriggerLeft(-1)) {
-    //     tas::Server* server = tas::Server::instance();
-    //     s32 r = server->connect("192.168.1.16", 8171);
-    //     if (r != 0)
-    //         printf({ 10.0f, 10.0f }, "Connection error: %s\n", strerror(r));
-    // }
 }
 
 void Menu::printf(const sead::Vector2i& pos, const sead::Color4f& color, const char* fmt, ...) {
@@ -137,12 +137,12 @@ void Menu::printf(const sead::Vector2i& pos, const sead::Color4f& color, const c
 
     mTextWriter->beginDraw();
 
-    // drop shadow
+    // draw drop shadow first
     mTextWriter->mColor = { 0.0f, 0.0f, 0.0f, color.a };
     mTextWriter->setCursorFromTopLeft(printPos + sead::Vector2f(mShadowOffset, mShadowOffset));
     mTextWriter->printImpl_(buf, -1, true, nullptr);
 
-    // text
+    // then draw text
     mTextWriter->mColor = color;
     mTextWriter->setCursorFromTopLeft(printPos);
     mTextWriter->printImpl_(buf, -1, true, nullptr);
@@ -161,8 +161,8 @@ void Menu::printf(const sead::Vector2i& pos, const char* fmt, ...) {
     va_end(args);
 }
 
-MenuItem* Menu::addItem(const sead::Vector2i& pos, const sead::SafeString& text) {
-    MenuItem* item = new MenuItem(this, pos, text);
+MenuItem* Menu::addItem(const sead::Vector2i& pos, const sead::SafeString& text, ActivateFunc activateFunc) {
+    MenuItem* item = new MenuItem(this, pos, text, activateFunc);
     mItems.pushBack(item);
     return item;
 }
@@ -190,14 +190,11 @@ void Menu::navigate(const sead::Vector2i& navDir) {
 }
 
 void Menu::activateItem() {
-
+    if (mSelectedItem && mSelectedItem->mActivateFunc)
+        mSelectedItem->mActivateFunc();
 }
 
-MenuItem::MenuItem(Menu* menu, const sead::Vector2i& pos, const sead::SafeString& text) {
-    mPos = pos;
-    mText = text;
-    mMenu = menu;
-}
+MenuItem::MenuItem(Menu* menu, const sead::Vector2i& pos, const sead::SafeString& text, ActivateFunc activateFunc) : mMenu(menu), mPos(pos), mText(text), mActivateFunc(activateFunc) {}
 
 void MenuItem::draw(const sead::Color4f& color) const {
     mMenu->drawCellBackground(mPos, this == mMenu->mSelectedItem);
