@@ -17,14 +17,18 @@ SWITCH_PORT = 8171
 HTTP_PORT = 8172
 WS_PORT = 8173
 
+
+# ========== LOGGING ==========
+
 # TODO: remove
 _print = print
 print = None
 
-
 def log(user: str, message: str):
     _print(f"[{user}] {message}")
 
+
+# ========== SWITCH SERVER ==========
 
 def switch_send_func(client_sock: socket.socket, stop):
     while not stop():
@@ -34,6 +38,8 @@ def switch_send_func(client_sock: socket.socket, stop):
         pass
 
 
+# ========== HTTP SERVER ==========
+
 class http_handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory="web", **kwargs)
@@ -42,13 +48,19 @@ class http_handler(http.server.SimpleHTTPRequestHandler):
         log("http", "{} - - [{}] {}".format(self.address_string(), self.log_date_time_string(), format % args))
 
 
-def serve_http():
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", HTTP_PORT), http_handler) as httpd:
-        log("http", f"serving at port {HTTP_PORT}")
-        httpd.serve_forever()
-    log("http", "server closed")
+class StoppableHTTPServer(http.server.HTTPServer):
+    def run(self):
+        try:
+            log("http", f"serving at port {HTTP_PORT}")
+            self.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.server_close()
+            log("http", "server closed")
 
+
+# ========== WEBSOCKET SERVER ==========
 
 def ws_handler(websocket: ServerConnection):
     log("ws", f"received connection from client {websocket.id}")
@@ -62,22 +74,19 @@ def ws_handler(websocket: ServerConnection):
         log("ws", f"client said: {message}")
 
 
-def serve_ws():
-    with serve(ws_handler, "localhost", WS_PORT) as server:
+def serve_ws(server):
+    try:
         log("ws", f"serving at port {WS_PORT}")
         server.serve_forever()
-    log("ws", "server closed")
+    except KeyboardInterrupt:
+        pass
+    finally:
+        log("ws", "server closed")
 
 
-def main():
-    # create http thread
-    http_thread = threading.Thread(target=serve_http, args=())
-    http_thread.start()
+# ========== SWITCH SERVER ==========
 
-    # create websocket thread
-    ws_thread = threading.Thread(target=serve_ws, args=())
-    ws_thread.start()
-
+def serve_switch():
     # create socket
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -120,8 +129,26 @@ def main():
             client_sock.close()
 
 
-if __name__ == "__main__":
+def main():
+    # create http thread
+    http_server = StoppableHTTPServer(("", HTTP_PORT), http_handler)
+    http_thread = threading.Thread(target=http_server.run, args=())
+    http_thread.start()
+
+    # create websocket thread
+    ws_server = serve(ws_handler, "localhost", WS_PORT)
+    ws_thread = threading.Thread(target=serve_ws, args=(ws_server,))
+    ws_thread.start()
+
     try:
-        main()
+        serve_switch()
     except KeyboardInterrupt:
-        log("all", "exiting...")
+        log("switch", "closing server...")
+        http_server.shutdown()
+        http_thread.join()
+        ws_server.shutdown()
+        ws_thread.join()
+
+
+if __name__ == "__main__":
+    main()
