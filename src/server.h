@@ -30,7 +30,7 @@ public:
     Server() = default;
 
     void init(sead::Heap* heap);
-    void threadFunc();
+    void threadRecv();
     s32 connect(const char* serverIP, u16 port);
 
     static void log(const char* fmt, ...);

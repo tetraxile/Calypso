@@ -43,7 +43,6 @@ HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSys
     gameSystemInit.orig(gameSystem);
 });
 
-
 HkTrampoline<void, GameSystem*> drawMainHook = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
     drawMainHook.orig(gameSystem);
 

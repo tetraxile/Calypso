@@ -22,10 +22,12 @@ function init() {
 }
 
 function onCloseClick() {
+  ws.send("type: close");
   ws.close();
 }
 
 function onButtonClick() {
+  ws.send("type: button")
   ws.send("hi :3");
 }
 
@@ -35,12 +37,15 @@ function onChooseFile(e) {
   }
 
   const file = e.target.files[0];
-  ws.send(file.name);
   let reader = new FileReader();
   reader.readAsArrayBuffer(file);
 
   reader.onload = readerEvent => {
     let content = readerEvent.target.result;
+
+    ws.send("type: script");
+    ws.send(file.name);
+    ws.send(content.byteLength.toString());
     ws.send(content);
   }
 }

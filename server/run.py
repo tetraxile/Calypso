@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
 
+import enum
+import http.server
+import queue
 import socket
+import struct
 import threading
-from queue import Queue
+import time
+from datetime import datetime
 from websockets.sync.server import serve, ServerConnection
 from websockets.exceptions import ConnectionClosedOK
-import http.server
-import socketserver
-# from http.server import SimpleHTTPRequestHandler
 
 import os
 os.chdir(os.path.dirname(__file__))
 
-
 SWITCH_PORT = 8171
 HTTP_PORT = 8172
 WS_PORT = 8173
+
+msg_queue = queue.Queue()
 
 
 # ========== LOGGING ==========
@@ -25,17 +28,44 @@ _print = print
 print = None
 
 def log(user: str, message: str):
-    _print(f"[{user}] {message}")
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    _print(f"[{timestamp} - {user}] {message}")
+
+
+# ========== PACKETS ==========
+
+class PacketType(enum.IntEnum):
+    Script = 0x01
+
+
+class ScriptPacket:
+    TYPENAME = "script"
+
+    def __init__(self, name: str, data: bytes):
+        self.name = name
+        self.data = data
+    
+    def construct(self) -> bytearray:
+        out = bytearray()
+        out.append(PacketType.Script.value)
+        out.append(min(len(self.name), 0xff))
+        out.extend(bytes(self.name, "utf-8")[:0xff])
+        out.extend(struct.pack("!I", len(self.data)))
+        out.extend(self.data)
+        return out
 
 
 # ========== SWITCH SERVER ==========
 
 def switch_send_func(client_sock: socket.socket, stop):
     while not stop():
-        # message = input()
-        # client_sock.send(bytes(message, "ascii"))
-        # msg_queue.put(bytes(message, "ascii"))
-        pass
+        try:
+            packet = msg_queue.get(timeout=1)
+        except queue.Empty:
+            continue
+
+        log("switch", f"sending packet type `{packet.TYPENAME}`")
+        client_sock.send(packet.construct())
 
 
 # ========== HTTP SERVER ==========
@@ -45,13 +75,13 @@ class http_handler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory="web", **kwargs)
     
     def log_message(self, format, *args):
-        log("http", "{} - - [{}] {}".format(self.address_string(), self.log_date_time_string(), format % args))
+        log("http", format % args)
 
 
 class StoppableHTTPServer(http.server.HTTPServer):
     def run(self):
         try:
-            log("http", f"serving at port {HTTP_PORT}")
+            log("http", f"listening on port {HTTP_PORT}")
             self.serve_forever()
         except KeyboardInterrupt:
             pass
@@ -67,16 +97,30 @@ def ws_handler(websocket: ServerConnection):
 
     while True:
         try:
-            message = websocket.recv(decode=False)
+            packet_type = websocket.recv()
+            if not packet_type.startswith("type: "):
+                log("ws", f"malformed packet type: `{packet_type}`")
+                break
+            packet_type = packet_type.removeprefix("type: ")
+            log("ws", f"received packet type {repr(packet_type)}")
+
+            if packet_type == "script":
+                script_filename = websocket.recv()
+                script_len = websocket.recv()
+                script_data = websocket.recv(decode=False)
+                log("ws", f"\tscript name: {script_filename}")
+                log("ws", f"\tscript len: {script_len}")
+                msg_queue.put(ScriptPacket(script_filename, script_data))
+            else:
+                log("ws", f"unsupported packet type {repr(packet_type)}")
         except ConnectionClosedOK:
             log("ws", "client closed connection")
             break
-        log("ws", f"client said: {message}")
 
 
 def serve_ws(server):
     try:
-        log("ws", f"serving at port {WS_PORT}")
+        log("ws", f"listening on port {WS_PORT}")
         server.serve_forever()
     except KeyboardInterrupt:
         pass
@@ -97,6 +141,7 @@ def serve_switch():
 
     # start listening on socket
     server_sock.listen(2)
+    log("switch", f"listening on port {SWITCH_PORT}")
 
     while True:
         log("switch", "waiting for connection...")
@@ -104,8 +149,6 @@ def serve_switch():
         log("switch", f"connection from {client_addr}")
 
         # create thread
-        # msg_queue = Queue()
-        # send_thread = threading.Thread(target=switch_send_func, args=(client_sock, msg_queue))
         stop_switch_send_thread = False
         switch_send_thread = threading.Thread(target=switch_send_func, args=(client_sock, lambda: stop_switch_send_thread))
         switch_send_thread.start()

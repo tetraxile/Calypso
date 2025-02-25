@@ -6,6 +6,7 @@ _ZN2nn6socket8InetPtonEiPKcPv
 _ZN2nn6socket9InetHtonsEt
 _ZN2nn6socket7ConnectEiPK8sockaddrj
 _ZN2nn6socket4SendEiPKvmi
+_ZN2nn6socket4RecvEiPvmi
 _ZN2nn6socket12GetLastErrnoEv
 _ZN2nn6socket9HStrErrorEi
 _ZN2nn6socket8InetAtonEPKcP7in_addr

@@ -30,7 +30,7 @@ void Server::init(sead::Heap* heap) {
 
     sead::ScopedCurrentHeapSetter heapSetter(mHeap);
 
-    al::FunctorV0M functor(this, &Server::threadFunc);
+    al::FunctorV0M functor(this, &Server::threadRecv);
     mRecvThread = new al::AsyncFunctorThread("Recv Thread", functor, 0, 0x20000, {});
 
     nn::Result result = nn::nifm::Initialize();
@@ -47,8 +47,16 @@ void Server::init(sead::Heap* heap) {
     disableSocketInit.installAtSym<"_ZN2nn6socket10InitializeEPvmmi">();
 }
 
-void Server::threadFunc() {
-    Server::log("thread\n");
+void Server::threadRecv() {
+    s32 recvLen = 0;
+    u8 recvBuf[0x1000];
+    while (true) {
+        memset(recvBuf, 0, sizeof(recvBuf));
+        recvLen = nn::socket::Recv(mSockFd, recvBuf, sizeof(recvBuf), 0);
+        
+        log("received %d bytes", recvLen);
+        nn::os::SleepThread(nn::TimeSpan::FromSeconds(1));
+    }
 }
 
 s32 Server::connect(const char* serverIP, u16 port) {
@@ -87,7 +95,7 @@ void Server::log(const char *fmt, ...) {
     va_start(args, fmt);
 
     char message[0x400];
-    snprintf(message, sizeof(message), fmt, args);
+    vsnprintf(message, sizeof(message), fmt, args);
 
     Server* server = instance();
     s32 r = nn::socket::Send(server->mSockFd, message, strlen(message), 0);

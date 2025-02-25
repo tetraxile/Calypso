@@ -1,7 +1,7 @@
 [-] net
   [-] server -> switch (8171)
     [x] make connection
-    [ ] implement TCP packets
+    [x] implement packets
     [ ] send STAS packets to client
     [ ] start/stop script from server as well as from debug menu
 
@@ -9,7 +9,7 @@
     [x] send browser button presses to server
     [x] host html locally
     [ ] different packet types
-    [ ] send scripts from browser to server
+    [x] send scripts from browser to server
 
 [-] make debug menu
   [x] design
