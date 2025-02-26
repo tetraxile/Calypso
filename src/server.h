@@ -20,17 +20,29 @@ private:
         CONNECTED,
     };
 
+    enum class PacketType : u8 {
+        None = 0x00,
+        ScriptInfo = 0x01,
+        ScriptData = 0x02,
+    };
+
+    constexpr static s32 cPacketHeaderSize = 0x10;
+
     sead::Heap* mHeap = nullptr;
     al::AsyncFunctorThread* mRecvThread = nullptr;
     void* mThreadStack = nullptr;
     s32 mSockFd = -1;
     State mState = State::UNINITIALIZED;
+    PacketType mCurPacketType = PacketType::None;
+
+    void threadRecv();
+    void handlePacket();
+    s32 recvAll(u8* recvBuf, s32 remaining);
 
 public:
     Server() = default;
 
     void init(sead::Heap* heap);
-    void threadRecv();
     s32 connect(const char* serverIP, u16 port);
 
     static void log(const char* fmt, ...);

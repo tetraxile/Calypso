@@ -11,6 +11,8 @@
 
 #include <heap/seadHeap.h>
 #include <heap/seadHeapMgr.h>
+#include <math/seadMathCalcCommon.h>
+#include <prim/seadEndian.h>
 
 #include <nn/nifm.h>
 #include <nn/socket.h>
@@ -48,14 +50,58 @@ void Server::init(sead::Heap* heap) {
 }
 
 void Server::threadRecv() {
-    s32 recvLen = 0;
-    u8 recvBuf[0x1000];
     while (true) {
-        memset(recvBuf, 0, sizeof(recvBuf));
-        recvLen = nn::socket::Recv(mSockFd, recvBuf, sizeof(recvBuf), 0);
-        
-        log("received %d bytes", recvLen);
+        handlePacket();
         nn::os::SleepThread(nn::TimeSpan::FromSeconds(1));
+    }
+}
+
+s32 Server::recvAll(u8* recvBuf, s32 remaining) {
+    s32 totalReceived = 0;
+    do {
+        s32 recvLen = nn::socket::Recv(mSockFd, recvBuf, remaining, 0);
+        if (recvLen <= 0) {
+            return recvLen;
+        }
+        remaining -= recvLen;
+        recvBuf += recvLen;
+        totalReceived += recvLen;
+    } while (remaining > 0);
+
+    return totalReceived;
+}
+
+void Server::handlePacket() {
+    u8 header[cPacketHeaderSize];
+    recvAll(header, cPacketHeaderSize);
+    PacketType packetType = PacketType(header[0]);
+
+    switch (packetType) {
+    case PacketType::ScriptInfo: {
+        u8 scriptNameLen = header[1];
+        char scriptName[0x100];
+        recvAll((u8*)scriptName, scriptNameLen);
+
+        log("received packet ScriptInfo: %s", scriptName);
+
+        break;
+    }
+    case PacketType::ScriptData: {
+        u32 scriptLen = sead::Endian::swapU32(*(u32*)&header[4]);
+        u8 chunkBuf[0x1000];
+        s32 totalReceived = 0;
+        while (totalReceived < scriptLen) {
+            s32 remaining = scriptLen - totalReceived;
+            s32 chunkLen = recvAll(chunkBuf, sead::Mathf::min(remaining, sizeof(chunkBuf)));
+            totalReceived += chunkLen;
+        }
+        log("received packet ScriptData: expected = %d, len = %d", scriptLen, totalReceived);
+
+        break;
+    }
+    case PacketType::None:
+    default:
+        break;
     }
 }
 

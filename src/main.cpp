@@ -56,6 +56,23 @@ HkTrampoline<void, sead::ControllerMgr*> inputHook = hk::hook::trampoline([](sea
 
     tas::Menu* menu = tas::Menu::instance();
     if (menu) menu->handleInput(port);
+
+
+    // nn::hid::NpadStyleSet styleSet = nn::hid::GetNpadStyleSet(port);
+
+    // nn::hid::NpadBaseState* state = nullptr;
+    // if (styleSet.Test(int(nn::hid::NpadStyleTag::NpadStyleFullKey)))
+    //     nn::hid::GetNpadStates((nn::hid::NpadFullKeyState*)state, 0x10, port);
+    // else if (styleSet.Test(int(nn::hid::NpadStyleTag::NpadStyleHandheld)))
+    //     nn::hid::GetNpadStates((nn::hid::NpadHandheldState*)state, 0x10, port);
+    // else if (styleSet.Test(int(nn::hid::NpadStyleTag::NpadStyleJoyDual)))
+    //     nn::hid::GetNpadStates((nn::hid::NpadJoyDualState*)state, 0x10, port);
+    // else if (styleSet.Test(int(nn::hid::NpadStyleTag::NpadStyleJoyLeft)))
+    //     nn::hid::GetNpadStates((nn::hid::NpadJoyLeftState*)state, 0x10, port);
+    // else if (styleSet.Test(int(nn::hid::NpadStyleTag::NpadStyleJoyRight)))
+    //     nn::hid::GetNpadStates((nn::hid::NpadJoyRightState*)state, 0x10, port);
+
+    // if (!state) return;
 });
 
 // HkTrampoline<void, sead::Vector2f*, const al::CameraPoser*> cameraRotateHook = hk::hook::trampoline([](sead::Vector2f* out, const al::CameraPoser* poser) -> void {

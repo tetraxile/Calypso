@@ -34,24 +34,50 @@ def log(user: str, message: str):
 
 # ========== PACKETS ==========
 
+PACKET_HEADER_SIZE = 0x10
+
 class PacketType(enum.IntEnum):
-    Script = 0x01
+    ScriptInfo = 0x01
+    ScriptData = 0x02
 
 
-class ScriptPacket:
-    TYPENAME = "script"
+class PacketScriptData:
+    TYPENAME = "script data"
+    OPCODE = PacketType.ScriptData.value
 
-    def __init__(self, name: str, data: bytes):
-        self.name = name
+    def __init__(self, data: bytes):
         self.data = data
     
+    def construct_header(self) -> bytearray:
+        out = bytearray(PACKET_HEADER_SIZE)
+        out[0] = self.OPCODE
+        out[4:8] = struct.pack("!I", len(self.data))
+        return out
+
     def construct(self) -> bytearray:
         out = bytearray()
-        out.append(PacketType.Script.value)
-        out.append(min(len(self.name), 0xff))
-        out.extend(bytes(self.name, "utf-8")[:0xff])
-        out.extend(struct.pack("!I", len(self.data)))
+        out.extend(self.construct_header())
         out.extend(self.data)
+        return out
+
+
+class PacketScriptInfo:
+    TYPENAME = "script info"
+    OPCODE = PacketType.ScriptInfo.value
+
+    def __init__(self, name: str):
+        self.name = name
+    
+    def construct_header(self) -> bytearray:
+        out = bytearray(PACKET_HEADER_SIZE)
+        out[0] = self.OPCODE
+        out[1] = min(len(self.name), 0xff)
+        return out
+
+    def construct(self) -> bytearray:
+        out = bytearray()
+        out.extend(self.construct_header())
+        out.extend(bytes(self.name, "utf-8")[:0xff])
         return out
 
 
@@ -92,27 +118,34 @@ class StoppableHTTPServer(http.server.HTTPServer):
 
 # ========== WEBSOCKET SERVER ==========
 
+def ws_recv_packet(websocket: ServerConnection):
+    packet_type = websocket.recv()
+    if not packet_type.startswith("type: "):
+        log("ws", f"malformed packet type: `{packet_type}`")
+        log("ws", "continuing...")
+    packet_type = packet_type.removeprefix("type: ")
+
+    log("ws", f"received packet type {repr(packet_type)}")
+
+    if packet_type == "script info":
+        script_filename = websocket.recv()
+        log("ws", f"\tscript name: {script_filename}")
+        msg_queue.put(PacketScriptInfo(script_filename))
+    elif packet_type == "script data":
+        script_len = websocket.recv()
+        script_data = websocket.recv(decode=False)
+        log("ws", f"\tscript len: {script_len}")
+        msg_queue.put(PacketScriptData(script_data))
+    else:
+        log("ws", f"unsupported packet type {repr(packet_type)}")
+
+
 def ws_handler(websocket: ServerConnection):
     log("ws", f"received connection from client {websocket.id}")
 
     while True:
         try:
-            packet_type = websocket.recv()
-            if not packet_type.startswith("type: "):
-                log("ws", f"malformed packet type: `{packet_type}`")
-                break
-            packet_type = packet_type.removeprefix("type: ")
-            log("ws", f"received packet type {repr(packet_type)}")
-
-            if packet_type == "script":
-                script_filename = websocket.recv()
-                script_len = websocket.recv()
-                script_data = websocket.recv(decode=False)
-                log("ws", f"\tscript name: {script_filename}")
-                log("ws", f"\tscript len: {script_len}")
-                msg_queue.put(ScriptPacket(script_filename, script_data))
-            else:
-                log("ws", f"unsupported packet type {repr(packet_type)}")
+            ws_recv_packet(websocket)
         except ConnectionClosedOK:
             log("ws", "client closed connection")
             break
@@ -156,13 +189,17 @@ def serve_switch():
         try:
             while True:
                 data = client_sock.recv(1024).decode("ascii")
-                log("switch", f"received {len(data)} bytes")
                 if not data:
+                    log("switch", f"received 0 bytes")
                     break
 
                 log("switch", f"{client_addr} -> {data}")
                 # while not msg_queue.empty():
                 #     client_sock.send(msg_queue.get())
+
+        except ConnectionResetError:
+            log("switch", "connection reset")
+            break
 
         finally:
             log("switch", "client disconnected")
