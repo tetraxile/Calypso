@@ -3,13 +3,27 @@
     [x] make connection
     [x] implement packets
     [ ] send STAS packets to client
+      [ ] implement chunking of scripts
     [ ] start/stop script from server as well as from debug menu
 
   [-] server -> browser (8172: http, 8173: ws)
     [x] send browser button presses to server
     [x] host html locally
-    [ ] different packet types
-    [x] send scripts from browser to server
+    [-] different packet types
+      [x] script packet
+      [ ]
+
+[-] scripts
+  [x] receive script from server
+  [ ] save script locally
+  [ ] run script
+    [ ] reimplement ReplayController
+    [ ] disable user input while script is running (still allow them to control menu)
+  [ ] pause/stop script midway through
+  [ ] camera independent scripts (i.e. freecam during script execution)
+  [ ] game-specific commands
+    [ ] teleporting
+    [ ] modifying HP
 
 [-] make debug menu
   [x] design
@@ -21,14 +35,20 @@
     [ ] save server IP to local file
   [ ] toasts/notifications? log?
   [ ] other visualizers? e.g. hitsensors
+  [ ] add more user feedback (e.g. "Loading...", etc.)
 
 [ ] savestates (part of script format? or just game save files as part of format?)
   [ ] position, rotation, animation, camera state, 
   [ ] assign a frame index of script to the savestate
   [ ] allow selecting objects to save
 
-[ ] camera independent scripts (i.e. freecam during script execution)
-
 [ ] test on all game versions
+
+[ ] converter from other script formats to stas format?
+    could be good to reduce the number of programs the user needs to use
+    and helps to provide good testing material to see if converted scripts don't desync
+    but also requires more maintenance if other formats continue to be used/updated
+
+[ ] make `deploy` folder for easier sending mod to switch (note that `sys/tools/deploy.py` exists)
 
 [ ] https://docs.google.com/document/d/1WEUSplw2VunYwyJE07FEZibBdUeb4LYs5hHu7LoLDF0
