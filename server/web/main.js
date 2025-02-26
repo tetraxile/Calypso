@@ -43,11 +43,9 @@ function onChooseFile(e) {
   reader.onload = readerEvent => {
     let content = readerEvent.target.result;
 
-    ws.send("type: script info");
-    ws.send(file.name);
-
-    ws.send("type: script data");
+    ws.send("type: script");
     ws.send(content.byteLength.toString());
+    ws.send(file.name);
     ws.send(content);
   }
 }

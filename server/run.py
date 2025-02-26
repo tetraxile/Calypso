@@ -37,48 +37,50 @@ def log(user: str, message: str):
 PACKET_HEADER_SIZE = 0x10
 
 class PacketType(enum.IntEnum):
-    ScriptInfo = 0x01
-    ScriptData = 0x02
+    Script = 0x01
 
 
-class PacketScriptData:
-    TYPENAME = "script data"
-    OPCODE = PacketType.ScriptData.value
+class PacketScript:
+    TYPENAME = "script"
+    OPCODE = PacketType.Script.value
 
-    def __init__(self, data: bytes):
+    def __init__(self, name: str, data: bytes):
+        self.name = name
         self.data = data
     
     def construct_header(self) -> bytearray:
         out = bytearray(PACKET_HEADER_SIZE)
         out[0] = self.OPCODE
+        out[1] = min(len(self.name), 0xff)
         out[4:8] = struct.pack("!I", len(self.data))
         return out
 
     def construct(self) -> bytearray:
         out = bytearray()
         out.extend(self.construct_header())
+        out.extend(struct.pack("255s", bytes(self.name, "utf-8")))
         out.extend(self.data)
         return out
 
 
-class PacketScriptInfo:
-    TYPENAME = "script info"
-    OPCODE = PacketType.ScriptInfo.value
+# class PacketScriptInfo:
+#     TYPENAME = "script info"
+#     OPCODE = PacketType.ScriptInfo.value
 
-    def __init__(self, name: str):
-        self.name = name
+#     def __init__(self, name: str):
+#         self.name = name
     
-    def construct_header(self) -> bytearray:
-        out = bytearray(PACKET_HEADER_SIZE)
-        out[0] = self.OPCODE
-        out[1] = min(len(self.name), 0xff)
-        return out
+#     def construct_header(self) -> bytearray:
+#         out = bytearray(PACKET_HEADER_SIZE)
+#         out[0] = self.OPCODE
+#         out[1] = min(len(self.name), 0xff)
+#         return out
 
-    def construct(self) -> bytearray:
-        out = bytearray()
-        out.extend(self.construct_header())
-        out.extend(bytes(self.name, "utf-8")[:0xff])
-        return out
+#     def construct(self) -> bytearray:
+#         out = bytearray()
+#         out.extend(self.construct_header())
+#         out.extend(bytes(self.name, "utf-8")[:0xff])
+#         return out
 
 
 # ========== SWITCH SERVER ==========
@@ -86,7 +88,7 @@ class PacketScriptInfo:
 def switch_send_func(client_sock: socket.socket, stop):
     while not stop():
         try:
-            packet = msg_queue.get(timeout=1)
+            packet = msg_queue.get(timeout=0.5)
         except queue.Empty:
             continue
 
@@ -127,15 +129,13 @@ def ws_recv_packet(websocket: ServerConnection):
 
     log("ws", f"received packet type {repr(packet_type)}")
 
-    if packet_type == "script info":
-        script_filename = websocket.recv()
-        log("ws", f"\tscript name: {script_filename}")
-        msg_queue.put(PacketScriptInfo(script_filename))
-    elif packet_type == "script data":
+    if packet_type == "script":
         script_len = websocket.recv()
+        script_filename = websocket.recv()
         script_data = websocket.recv(decode=False)
+        log("ws", f"\tscript name: {script_filename}")
         log("ws", f"\tscript len: {script_len}")
-        msg_queue.put(PacketScriptData(script_data))
+        msg_queue.put(PacketScript(script_filename, script_data))
     else:
         log("ws", f"unsupported packet type {repr(packet_type)}")
 

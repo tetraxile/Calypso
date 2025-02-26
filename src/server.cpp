@@ -14,6 +14,7 @@
 #include <math/seadMathCalcCommon.h>
 #include <prim/seadEndian.h>
 
+#include <nn/fs.h>
 #include <nn/nifm.h>
 #include <nn/socket.h>
 
@@ -77,17 +78,14 @@ void Server::handlePacket() {
     PacketType packetType = PacketType(header[0]);
 
     switch (packetType) {
-    case PacketType::ScriptInfo: {
+    case PacketType::Script: {
         u8 scriptNameLen = header[1];
-        char scriptName[0x100];
-        recvAll((u8*)scriptName, scriptNameLen);
-
-        log("received packet ScriptInfo: %s", scriptName);
-
-        break;
-    }
-    case PacketType::ScriptData: {
         u32 scriptLen = sead::Endian::swapU32(*(u32*)&header[4]);
+
+        char scriptName[0x101];
+        recvAll((u8*)scriptName, 0xff);
+        scriptName[0x100] = '\0';
+
         u8 chunkBuf[0x1000];
         s32 totalReceived = 0;
         while (totalReceived < scriptLen) {
@@ -95,7 +93,8 @@ void Server::handlePacket() {
             s32 chunkLen = recvAll(chunkBuf, sead::Mathf::min(remaining, sizeof(chunkBuf)));
             totalReceived += chunkLen;
         }
-        log("received packet ScriptData: expected = %d, len = %d", scriptLen, totalReceived);
+
+        log("received packet Script: name = %s, len = %d (%d)", scriptName, scriptLen, totalReceived);
 
         break;
     }

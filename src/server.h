@@ -22,8 +22,7 @@ private:
 
     enum class PacketType : u8 {
         None = 0x00,
-        ScriptInfo = 0x01,
-        ScriptData = 0x02,
+        Script = 0x01,
     };
 
     constexpr static s32 cPacketHeaderSize = 0x10;
