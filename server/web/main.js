@@ -31,6 +31,24 @@ function onButtonClick() {
   ws.send("hi :3");
 }
 
+function onSettingsClick() {
+  moonrefresh = document.getElementById("MoonRefresh").checked;
+  cutscenes = document.getElementById("Cutscenes").checked;
+  moonlock = document.getElementById("MoonLock").checked;
+  checkpoints = document.getElementById("Checkpoints").checked;
+  autosave = document.getElementById("Autosave").checked;
+  hud = document.getElementById("HUD").checked;
+  music = document.getElementById("Music").checked;
+  ws.send("type: settings");
+  ws.send(moonrefresh);
+  ws.send(cutscenes);
+  ws.send(moonlock);
+  ws.send(checkpoints);
+  ws.send(autosave);
+  ws.send(hud);
+  ws.send(music);
+}
+
 function onChooseFile(e) {
   if (!e || !e.target || !e.target.files || event.target.files.length === 0) {
     return;

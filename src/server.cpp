@@ -55,6 +55,23 @@ void Server::threadRecv() {
         recvLen = nn::socket::Recv(mSockFd, recvBuf, sizeof(recvBuf), 0);
         
         log("received %d bytes", recvLen);
+        
+        int type = (*(packetBase*)recvBuf).type;
+
+        switch (type) {
+            case 1:
+                log("received script packet");
+                handleScriptPacket((packetScript*)&recvBuf);
+                break;
+            case 2:
+                log("received settings packet");
+                handleSettingsPacket((packetSettings*)&recvBuf);
+                break;
+            default:
+                log("unknown packet type %d", type);
+                break;
+        }
+
         nn::os::SleepThread(nn::TimeSpan::FromSeconds(1));
     }
 }
@@ -102,5 +119,17 @@ void Server::log(const char *fmt, ...) {
 
     va_end(args);
 }
+
+void Server::handleSettingsPacket(packetSettings* packet) {
+    moonRefresh = packet->moonRefresh;
+    alwasyManualCutscenes = packet->alwasyManualCutscenes;
+    disableMoonLock = packet->disableMoonLock;
+    alwaysAllowCheckpoints = packet->alwaysAllowCheckpoints;
+    disableSave = packet->disableSave;
+    disableHud = packet->disableHud;
+    disableMusic = packet->disableMusic;
+}
+
+void Server::handleScriptPacket(packetScript* packet) {}
 
 }  // namespace tas

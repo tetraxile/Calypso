@@ -19,11 +19,30 @@
 #include "al/Library/Memory/HeapUtil.h"
 
 #include "game/System/GameSystem.h"
+#include "game/Scene/StageScene.h"
+#include "al/Library/Audio/AudioUtil.h"
+#include "game/Layout/MapMini.h"
+#include "System/GameDataHolderWriter.h"
 
 #include "server.h"
 #include "menu.h"
 
 using namespace hk;
+
+#define CUTSCENE_HOOK_CALLBACK(NAME)                                                                     \
+HkTrampoline<bool, void*> NAME = hk::hook::trampoline([](void* thisPtr) -> bool {               \
+    tas::Server* server = tas::Server::instance();                                              \
+        if (server->getAlwasyManualCutscenes())                                                 \
+            return true;                                                                        \
+        return NAME.orig(thisPtr);                                                              \
+});
+
+CUTSCENE_HOOK_CALLBACK(RsDemoHook);
+CUTSCENE_HOOK_CALLBACK(FirstDemoScenarioHook);
+CUTSCENE_HOOK_CALLBACK(FirstDemoWorldHook);
+CUTSCENE_HOOK_CALLBACK(FirstDemoMoonRockHook);
+CUTSCENE_HOOK_CALLBACK(ShowDemoHackHook);
+
 
 namespace tas {
 sead::Heap* initializeHeap() {
@@ -63,10 +82,73 @@ HkTrampoline<void, sead::ControllerMgr*> inputHook = hk::hook::trampoline([](sea
 //     out->y = 0.0f;
 // });
 
+HkTrampoline<void, StageScene*> controlHook = hk::hook::trampoline([](StageScene* scene) -> void {
+    tas::Server* server = tas::Server::instance();
+
+    if (server->getDisableMusic()) {
+        if (al::isPlayingBgm(scene)) {
+            al::stopAllBgm(scene, 0);
+        }
+    }
+    if (server->getDisableHud() && scene->stageSceneLayout->isWait()) {
+        scene->stageSceneLayout->end();
+        MapMini* compass = scene->stageSceneLayout->mMapMini;
+        if (compass->mIsAlive) compass->end();
+    }
+    
+    controlHook.orig(scene);
+});
+
+HkTrampoline<bool, StageScene*> saveHook = hk::hook::trampoline([](StageScene* scene) -> bool {
+    tas::Server* server = tas::Server::instance();
+    return server->getDisableSave() ? false : saveHook.orig(scene);
+});
+
+HkTrampoline<bool, void*> checkpointWarpHook = hk::hook::trampoline([](void* thisPtr) -> bool {
+    tas::Server* server = tas::Server::instance();
+    return server->getAlwaysAllowCheckpoints() ? true : checkpointWarpHook.orig(thisPtr);
+});
+
+class ShineInfo;
+HkTrampoline<bool, GameDataHolderWriter*, ShineInfo*> greyShineRefreshHook = hk::hook::trampoline([](GameDataHolderWriter* writer, ShineInfo* shine) -> bool {
+    tas::Server* server = tas::Server::instance();
+    return server->getMoonRefresh() ? false : greyShineRefreshHook.orig(writer, shine);
+});
+
+HkTrampoline<void, GameDataHolderWriter*, ShineInfo*> shineRefreshHook = hk::hook::trampoline([](GameDataHolderWriter* writer, ShineInfo* shine) -> void {
+    tas::Server* server = tas::Server::instance();
+
+    char* moonRefreshText = "Calypso";
+
+    ro::getMainModule()->writeRo(0x01832301, moonRefreshText, strlen(moonRefreshText)+1);
+
+    if (!server->getMoonRefresh())
+        shineRefreshHook.orig(writer, shine);
+});
+
+HkTrampoline<int, GameDataHolder*, bool*, int> disableMoonLockHook = hk::hook::trampoline([](GameDataHolder* holder, bool* isCrashList, int worldID) -> int {
+    tas::Server* server = tas::Server::instance();
+    return server->getDisableMoonLock() ? 0 : disableMoonLockHook.orig(holder, isCrashList, worldID);
+});
+
 extern "C" void hkMain() {
     gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
 
     drawMainHook.installAtSym<"_ZN10GameSystem8drawMainEv">();
 
     inputHook.installAtSym<"_ZN4sead13ControllerMgr4calcEv">();
+
+    controlHook.installAtSym<"_ZN10StageScene7controlEv">();
+    saveHook.installAtSym<"_ZNK10StageScene12isEnableSaveEv">();
+    checkpointWarpHook.installAtSym<"_ZNK9MapLayout22isEnableCheckpointWarpEv">();
+    greyShineRefreshHook.installAtSym<"_ZN16GameDataFunction10isGotShineE22GameDataHolderAccessorPK9ShineInfo">();
+    shineRefreshHook.installAtSym<"_ZN16GameDataFunction11setGotShineE20GameDataHolderWriterPK9ShineInfo">();
+    disableMoonLockHook.installAtSym<"_ZNK14GameDataHolder18findUnlockShineNumEPbi">();
+
+    RsDemoHook.installAtSym<"_ZN2rs11isFirstDemoEPKN2al5SceneE">();
+    FirstDemoScenarioHook.installAtSym<"_ZN2rs30isFirstDemoScenarioStartCameraEPKN2al9LiveActorE">();
+    FirstDemoWorldHook.installAtSym<"_ZN2rs27isFirstDemoWorldIntroCameraEPKN2al5SceneE">();
+    FirstDemoMoonRockHook.installAtSym<"_ZNK12MoonRockData38isEnableShowDemoAfterOpenMoonRockFirstEv">();
+    ShowDemoHackHook.installAtSym<"_ZNK18DemoStateHackFirst20isEnableShowHackDemoEv">();
+    
 }
