@@ -2,15 +2,15 @@
   [-] server -> switch (8171)
     [x] make connection
     [x] implement packets
-    [ ] send STAS packets to client
-      [ ] implement chunking of scripts
+    [x] send STAS files to client
+      [x] implement chunking of scripts
     [ ] start/stop script from server as well as from debug menu
 
   [-] server -> browser (8172: http, 8173: ws)
     [x] send browser button presses to server
     [x] host html locally
     [-] different packet types
-      [x] script packet
+      [x] script packet (info, data)
       [ ]
 
 [-] scripts
