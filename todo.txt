@@ -51,6 +51,8 @@
 
 [ ] make `deploy` folder for easier sending mod to switch (note that `sys/tools/deploy.py` exists)
 
-[ ] handle packets on console
+[-] handle packets on console
+  [ ] script
+  [x] settings
 
 [ ] https://docs.google.com/document/d/1WEUSplw2VunYwyJE07FEZibBdUeb4LYs5hHu7LoLDF0

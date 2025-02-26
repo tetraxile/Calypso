@@ -70,7 +70,7 @@ class SettingsPacket:
     def construct(self) -> bytearray:
         out = bytearray()
         
-        log("settings", f"moonrefresh: {self.moonrefresh}, cutscenes: {self.cutscenes}, moonlock: {self.moonlock}, checkpoints: {self.checkpoints}, autosave: {self.autosave}, hud: {self.hud}, music: {self.music}")
+        # log("settings", f"moonrefresh: {self.moonrefresh}, cutscenes: {self.cutscenes}, moonlock: {self.moonlock}, checkpoints: {self.checkpoints}, autosave: {self.autosave}, hud: {self.hud}, music: {self.music}")
         
         out.append(int(PacketType.Settings.value))
         out.append(int(self.moonrefresh))
@@ -195,7 +195,7 @@ def serve_switch():
         try:
             while True:
                 data = client_sock.recv(1024).decode("ascii")
-                log("switch", f"received {len(data)} bytes")
+                # log("switch", f"received {len(data)} bytes")
                 if not data:
                     break
 
