@@ -11,7 +11,7 @@
     [x] host html locally
     [-] different packet types
       [x] script packet
-      [ ]
+      [x] settings packet
 
 [-] scripts
   [x] receive script from server
@@ -50,5 +50,7 @@
     but also requires more maintenance if other formats continue to be used/updated
 
 [ ] make `deploy` folder for easier sending mod to switch (note that `sys/tools/deploy.py` exists)
+
+[ ] handle packets on console
 
 [ ] https://docs.google.com/document/d/1WEUSplw2VunYwyJE07FEZibBdUeb4LYs5hHu7LoLDF0

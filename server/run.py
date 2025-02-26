@@ -36,6 +36,7 @@ def log(user: str, message: str):
 
 class PacketType(enum.IntEnum):
     Script = 0x01
+    Settings = 0x02
 
 
 class ScriptPacket:
@@ -54,6 +55,32 @@ class ScriptPacket:
         out.extend(self.data)
         return out
 
+class SettingsPacket:
+    TYPENAME = "settings"
+
+    def __init__(self, moonrefresh: bool, cutscenes: bool, moonlock: bool, checkpoints: bool, autosave: bool, hud: bool, music: bool):
+        self.moonrefresh = moonrefresh
+        self.cutscenes = cutscenes
+        self.moonlock = moonlock
+        self.checkpoints = checkpoints
+        self.autosave = autosave
+        self.hud = hud
+        self.music = music
+    
+    def construct(self) -> bytearray:
+        out = bytearray()
+        
+        log("settings", f"moonrefresh: {self.moonrefresh}, cutscenes: {self.cutscenes}, moonlock: {self.moonlock}, checkpoints: {self.checkpoints}, autosave: {self.autosave}, hud: {self.hud}, music: {self.music}")
+        
+        out.append(int(PacketType.Settings.value))
+        out.append(int(self.moonrefresh))
+        out.append(int(self.cutscenes))
+        out.append(int(self.moonlock))
+        out.append(int(self.checkpoints))
+        out.append(int(self.autosave))
+        out.append(int(self.hud))
+        out.append(int(self.music))
+        return out
 
 # ========== SWITCH SERVER ==========
 
@@ -111,6 +138,18 @@ def ws_handler(websocket: ServerConnection):
                 log("ws", f"\tscript name: {script_filename}")
                 log("ws", f"\tscript len: {script_len}")
                 msg_queue.put(ScriptPacket(script_filename, script_data))
+                
+            elif packet_type == "settings":
+                moonrefresh = True if websocket.recv() == "true" else False
+                cutscenes = True if websocket.recv() == "true" else False
+                moonlock = True if websocket.recv() == "true" else False
+                checkpoints = True if websocket.recv() == "true" else False
+                autosave = True if websocket.recv() == "true" else False
+                hud = True if websocket.recv() == "true" else False
+                music = True if websocket.recv() == "true" else False
+                # log("ws", f"moonrefresh: {moonrefresh}, cutscenes: {cutscenes}, moonlock: {moonlock}, checkpoints: {checkpoints}, autosave: {autosave}, hud: {hud}, music: {music}")
+                msg_queue.put(SettingsPacket(moonrefresh, cutscenes, moonlock, checkpoints, autosave, hud, music))
+                
             else:
                 log("ws", f"unsupported packet type {repr(packet_type)}")
         except ConnectionClosedOK:
