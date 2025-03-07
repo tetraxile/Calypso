@@ -8,7 +8,7 @@ import struct
 import threading
 import time
 from datetime import datetime
-from websockets.sync.server import serve, ServerConnection
+from websockets.sync.server import serve, ServerConnection, Server as WsServer
 from websockets.exceptions import ConnectionClosedOK
 
 import os
@@ -151,7 +151,7 @@ def ws_handler(websocket: ServerConnection):
             break
 
 
-def serve_ws(server):
+def serve_ws(server: WsServer):
     try:
         log("ws", f"listening on port {WS_PORT}")
         server.serve_forever()

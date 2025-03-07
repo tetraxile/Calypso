@@ -42,6 +42,8 @@
   [ ] assign a frame index of script to the savestate
   [ ] allow selecting objects to save
 
+[ ] (python) switch from threading to asyncio
+
 [ ] test on all game versions
 
 [ ] converter from other script formats to stas format?
