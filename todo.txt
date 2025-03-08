@@ -15,7 +15,7 @@
 
 [-] scripts
   [x] receive script from server
-  [ ] save script locally
+  [x] save script locally
   [ ] run script
     [ ] reimplement ReplayController
     [ ] disable user input while script is running (still allow them to control menu)
