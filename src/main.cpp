@@ -5,8 +5,12 @@
 
 #include <agl/common/aglDrawContext.h>
 
+#include <nn/fs.h>
+
 #include <controller/seadControllerAddon.h>
 #include <controller/seadControllerMgr.h>
+#include <filedevice/nin/seadNinSDFileDeviceNin.h>
+#include <filedevice/seadFileDeviceMgr.h>
 #include <gfx/seadTextWriter.h>
 #include <gfx/seadViewport.h>
 #include <heap/seadHeap.h>
@@ -30,6 +34,12 @@ sead::Heap* initializeHeap() {
     return sead::ExpHeap::create(0x100000, "CalypsoHeap", al::getStationedHeap(), 8, sead::Heap::cHeapDirection_Forward, false);
 }
 }
+
+HkTrampoline<void, sead::FileDeviceMgr*> fileDeviceMgrHook = hk::hook::trampoline([](sead::FileDeviceMgr* fileDeviceMgr) -> void {
+    fileDeviceMgrHook.orig(fileDeviceMgr);
+
+    fileDeviceMgr->mMountedSd = nn::fs::MountSdCardForDebug("sd") == 0;
+});
 
 HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
     sead::Heap* heap = tas::initializeHeap();
@@ -86,4 +96,6 @@ extern "C" void hkMain() {
     drawMainHook.installAtSym<"_ZN10GameSystem8drawMainEv">();
 
     inputHook.installAtSym<"_ZN4sead13ControllerMgr4calcEv">();
+
+    fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
 }

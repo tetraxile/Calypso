@@ -3,20 +3,23 @@
 #include "heap/seadDisposer.h"
 #include "hk/diag/diag.h"
 #include "hk/hook/Trampoline.h"
+#include "nn/fs/fs_files.h"
+#include "nn/fs/fs_types.h"
 
 #include <cstdio>
 #include <cstdlib>
 #include <netdb.h>
 #include <netinet/in.h>
 
+#include <nn/fs.h>
+#include <nn/nifm.h>
+#include <nn/socket.h>
+
 #include <heap/seadHeap.h>
 #include <heap/seadHeapMgr.h>
 #include <math/seadMathCalcCommon.h>
 #include <prim/seadEndian.h>
 
-#include <nn/fs.h>
-#include <nn/nifm.h>
-#include <nn/socket.h>
 
 HkTrampoline<void> disableSocketInit = hk::hook::trampoline([]() -> void {});
 
@@ -50,13 +53,6 @@ void Server::init(sead::Heap* heap) {
     disableSocketInit.installAtSym<"_ZN2nn6socket10InitializeEPvmmi">();
 }
 
-void Server::threadRecv() {
-    while (true) {
-        handlePacket();
-        nn::os::SleepThread(nn::TimeSpan::FromSeconds(1));
-    }
-}
-
 s32 Server::recvAll(u8* recvBuf, s32 remaining) {
     s32 totalReceived = 0;
     do {
@@ -70,6 +66,13 @@ s32 Server::recvAll(u8* recvBuf, s32 remaining) {
     } while (remaining > 0);
 
     return totalReceived;
+}
+
+void Server::threadRecv() {
+    while (true) {
+        handlePacket();
+        nn::os::SleepThread(nn::TimeSpan::FromSeconds(1));
+    }
 }
 
 void Server::handlePacket() {
@@ -86,15 +89,45 @@ void Server::handlePacket() {
         recvAll((u8*)scriptName, 0xff);
         scriptName[0x100] = '\0';
 
-        u8 chunkBuf[0x1000];
-        s32 totalReceived = 0;
-        while (totalReceived < scriptLen) {
-            s32 remaining = scriptLen - totalReceived;
-            s32 chunkLen = recvAll(chunkBuf, sead::Mathf::min(remaining, sizeof(chunkBuf)));
-            totalReceived += chunkLen;
+        log("received packet Script: name = %s, len = %d (%d)", scriptName, scriptLen);
+
+        char filePath[0x200];
+        snprintf(filePath, sizeof(filePath), "sd:/Calypso/scripts/%s", scriptName);
+
+        // TODO: replace these aborts with proper logs
+        nn::Result r;
+
+        nn::fs::DirectoryEntryType entryType;
+        r = nn::fs::GetEntryType(&entryType, filePath);
+        // HK_ABORT_UNLESS_R(hk::Result(r.GetInnerValueForDebug()));
+
+        if (entryType == nn::fs::DirectoryEntryType_File) {
+            r = nn::fs::DeleteFile(filePath);
+            HK_ABORT_UNLESS_R(hk::Result(r.GetInnerValueForDebug()));
         }
 
-        log("received packet Script: name = %s, len = %d (%d)", scriptName, scriptLen, totalReceived);
+        r = nn::fs::CreateFile(filePath, scriptLen);
+        HK_ABORT_UNLESS_R(hk::Result(r.GetInnerValueForDebug()));
+
+        nn::fs::FileHandle fileHandle;
+        r = nn::fs::OpenFile(&fileHandle, filePath, nn::fs::OpenMode_Write);
+        HK_ABORT_UNLESS_R(hk::Result(r.GetInnerValueForDebug()));
+
+        u8 chunkBuf[0x10000];
+        memset(chunkBuf, 0, sizeof(chunkBuf));
+        s32 totalWritten = 0;
+        while (totalWritten < scriptLen) {
+            s32 remaining = scriptLen - totalWritten;
+            s32 chunkLen = recvAll(chunkBuf, sead::Mathf::min(remaining, sizeof(chunkBuf)));
+            // log("write: offset %#x, chunk len %#x", totalWritten, chunkLen);
+            r = nn::fs::WriteFile(fileHandle, totalWritten, chunkBuf, chunkLen, nn::fs::WriteOption::CreateOption(nn::fs::WriteOptionFlag_Flush));
+            HK_ABORT_UNLESS_R(hk::Result(r.GetInnerValueForDebug()));
+            totalWritten += chunkLen;
+        }
+
+        nn::fs::CloseFile(fileHandle);
+
+        log("wrote %d bytes to file '%s'", totalWritten, filePath);
 
         break;
     }

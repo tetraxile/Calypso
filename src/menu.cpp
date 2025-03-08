@@ -73,7 +73,7 @@ void Menu::init(sead::Heap* heap) {
     mSelectedItem = addItem({ 0, 19 }, "connect", []() -> void {
         tas::Server* server = tas::Server::instance();
         tas::Menu* menu = tas::Menu::instance();
-        s32 r = server->connect("192.168.1.16", 8171);
+        s32 r = server->connect("192.168.1.215", 8171);
         // if (r != 0)
         //     menu->printf({ 5, 30 }, "Connection error: %s\n", strerror(r));
     });
