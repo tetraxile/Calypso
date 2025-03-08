@@ -1,4 +1,5 @@
 #include "menu.h"
+#include "hk/gfx/Util.h"
 #include "server.h"
 
 #include <hk/diag/diag.h>
@@ -23,57 +24,27 @@
 
 #include "al/Library/Controller/InputFunction.h"
 #include "al/Library/Controller/PadReplayFunction.h"
-#include "al/Library/File/FileUtil.h"
-#include "al/Library/Memory/HeapUtil.h"
 #include "al/Library/System/GameSystemInfo.h"
 
 #include "game/System/Application.h"
-#include "gfx/seadCamera.h"
-
-constexpr static char DBG_SHADER_PATH[] = "DebugData/Font/nvn_font_shader_jis1.bin";
-constexpr static char DBG_FONT_PATH[] = "DebugData/Font/nvn_font_jis1.ntx";
-constexpr static char DBG_TBL_PATH[] = "DebugData/Font/nvn_font_jis1_tbl.bin";
 
 namespace tas {
 
 SEAD_SINGLETON_DISPOSER_IMPL(Menu);
 
-void Menu::initFontMgr() {
-    sead::Heap* heap = al::getStationedHeap();
-
-    sead::DebugFontMgrJis1Nvn::createInstance(heap);
-
-    if (al::isExistFile(DBG_SHADER_PATH) && al::isExistFile(DBG_FONT_PATH) && al::isExistFile(DBG_TBL_PATH)) {
-        sead::DebugFontMgrJis1Nvn::instance()->initialize(heap, DBG_SHADER_PATH, DBG_FONT_PATH, DBG_TBL_PATH, 0x100000);
-    }
-}
-
 void Menu::init(sead::Heap* heap) {
     mHeap = heap;
-
     sead::ScopedCurrentHeapSetter heapSetter(mHeap);
 
-    sead::TextWriter::setDefaultFont(sead::DebugFontMgrJis1Nvn::instance());
-
-    al::DrawSystemInfo* drawInfo = Application::instance()->mDrawSystemInfo;
-
-    agl::DrawContext* context = drawInfo->drawContext;
-    const agl::RenderBuffer* renderBuffer = drawInfo->dockedRenderBuffer;
-
-    sead::Viewport* viewport = new sead::Viewport(*renderBuffer);
-
-    mTextWriter = new sead::TextWriter(context, viewport);
-    mTextWriter->setupGraphics(context);
-    mTextWriter->setScaleFromFontHeight(mFontHeight);
-    mTextWriter->mColor = mFgColor;
+    mRenderer = hk::gfx::DebugRenderer::instance();
 
     mItems = sead::PtrArray<MenuItem>();
     mItems.tryAllocBuffer(cMenuItemNumMax, heap);
 
     mSelectedItem = addItem({ 0, 19 }, "connect", []() -> void {
         tas::Server* server = tas::Server::instance();
-        tas::Menu* menu = tas::Menu::instance();
         s32 r = server->connect("192.168.1.215", 8171);
+        // tas::Menu* menu = tas::Menu::instance();
         // if (r != 0)
         //     menu->printf({ 5, 30 }, "Connection error: %s\n", strerror(r));
     });
@@ -82,14 +53,6 @@ void Menu::init(sead::Heap* heap) {
             addItem({ x, 20 + y }, "item");
         }
     }
-
-    auto* projection = new sead::OrthoProjection;
-    projection->setByViewport(*viewport);
-    auto* camera = new sead::OrthoCamera(*projection);
-
-    mDrawer = new sead::PrimitiveDrawer(context);
-    mDrawer->setCamera(camera);
-    mDrawer->setProjection(projection);
 }
 
 void Menu::handleInput(s32 port) {
@@ -107,47 +70,53 @@ void Menu::handleInput(s32 port) {
         activateItem();
 }
 
-void Menu::drawQuad(const sead::Vector2f& tl, const sead::Vector2f& size, const sead::Color4f& color0, const sead::Color4f& color1) {
-    sead::Vector2f screen(1280.0f, 720.0f);
-    sead::Vector3f pos(-screen.x / 2 + size.x / 2 + tl.x, screen.y / 2 - size.y / 2 - tl.y, 0.0f);
-    mDrawer->begin();
-    mDrawer->drawQuad({ pos, size, color0, color1 });
-    mDrawer->end();
+void Menu::drawQuad(const hk::util::Vector2f& tl, const hk::util::Vector2f& size, const sead::Color4f& color0, const sead::Color4f& color1) {
+    u32 uColor0 = hk::gfx::rgbaf(color0.r, color0.g, color0.b, color0.a);
+    u32 uColor1 = hk::gfx::rgbaf(color1.r, color1.g, color1.b, color1.a);
+
+    mRenderer->drawQuad(
+        { { tl.x, tl.y }, { 0, 0 }, uColor0 },
+        { { tl.x + size.x, tl.y }, { 1.0, 0 }, uColor0 },
+        { { tl.x + size.x, tl.y + size.y }, { 1.0, 1.0 }, uColor1 },
+        { { tl.x, tl.y + size.y }, { 0, 1.0 }, uColor1 }
+    );
 }
 
 void Menu::drawCellBackground(const sead::Vector2i& pos, bool isSelected) {
     f32 shade = isSelected ? 1.0f : 0.5f;
-    drawQuad(cellPosToAbsolute(pos), mCellDimension - sead::Vector2f(1.0f, 1.0f), mBgColor0 * shade, mBgColor1 * shade);
+    drawQuad(cellPosToAbsolute(pos), mCellDimension - hk::util::Vector2f(1.0f, 1.0f), mBgColor0 * shade, mBgColor1 * shade);
 }
 
 void Menu::draw() {
+    auto* drawContext = Application::instance()->mDrawSystemInfo->drawContext;
+    mRenderer->clear();
+    mRenderer->begin(drawContext->getCommandBuffer()->ToData()->pNvnCommandBuffer);
+    mRenderer->setGlyphHeight(mFontHeight);
+
     for (auto& item : mItems) {
         item.draw();
     }
+    
+    mRenderer->end();
 }
 
 void Menu::printf(const sead::Vector2i& pos, const sead::Color4f& color, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
 
-    sead::Vector2f printPos = cellPosToAbsolute(pos);
+    hk::util::Vector2f printPos = cellPosToAbsolute(pos);
 
     char buf[128];
     vsnprintf(buf, sizeof(buf), fmt, args);
 
-    mTextWriter->beginDraw();
-
     // draw drop shadow first
-    mTextWriter->mColor = { 0.0f, 0.0f, 0.0f, color.a };
-    mTextWriter->setCursorFromTopLeft(printPos + sead::Vector2f(mShadowOffset, mShadowOffset));
-    mTextWriter->printImpl_(buf, -1, true, nullptr);
+    hk::util::Vector2f shadowPos = printPos + hk::util::Vector2f(mShadowOffset, mShadowOffset);
+    u32 shadowColor = hk::gfx::rgbaf(0.0f, 0.0f, 0.0f, color.a * 0.8f);
+    mRenderer->drawString(shadowPos, buf, shadowColor);
 
     // then draw text
-    mTextWriter->mColor = color;
-    mTextWriter->setCursorFromTopLeft(printPos);
-    mTextWriter->printImpl_(buf, -1, true, nullptr);
-
-    mTextWriter->endDraw();
+    u32 textColor = hk::gfx::rgbaf(color.r, color.g, color.b, color.a);
+    mRenderer->drawString(printPos, buf, textColor);
 
     va_end(args);
 }

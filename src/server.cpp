@@ -33,7 +33,6 @@ SEAD_SINGLETON_DISPOSER_IMPL(Server);
 
 void Server::init(sead::Heap* heap) {
     mHeap = heap;
-
     sead::ScopedCurrentHeapSetter heapSetter(mHeap);
 
     al::FunctorV0M functor(this, &Server::threadRecv);

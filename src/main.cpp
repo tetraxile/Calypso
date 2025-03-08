@@ -1,5 +1,6 @@
 #include "hk/Result.h"
 #include "hk/diag/diag.h"
+#include "hk/gfx/DebugRenderer.h"
 #include "hk/hook/Trampoline.h"
 #include "hk/util/Context.h"
 
@@ -46,7 +47,6 @@ HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSys
     tas::Server* server = tas::Server::createInstance(heap);
     server->init(heap);
 
-    tas::Menu::initFontMgr();
     tas::Menu* menu = tas::Menu::createInstance(heap);
     menu->init(heap);
 
@@ -92,10 +92,8 @@ HkTrampoline<void, sead::ControllerMgr*> inputHook = hk::hook::trampoline([](sea
 
 extern "C" void hkMain() {
     gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
-
     drawMainHook.installAtSym<"_ZN10GameSystem8drawMainEv">();
-
     inputHook.installAtSym<"_ZN4sead13ControllerMgr4calcEv">();
-
     fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
+    hk::gfx::DebugRenderer::instance()->installHooks();
 }
