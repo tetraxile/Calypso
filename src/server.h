@@ -1,6 +1,3 @@
-#ifndef SERVER_H
-#define SERVER_H
-
 #include <nn/os.h>
 #include <sead/basis/seadTypes.h>
 #include <sead/heap/seadExpHeap.h>
@@ -47,5 +44,3 @@ public:
 };
 
 } // namespace tas
-
-#endif

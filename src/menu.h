@@ -1,5 +1,4 @@
-#ifndef MENU_H
-#define MENU_H
+#pragma once
 
 #include <hk/gfx/DebugRenderer.h>
 
@@ -78,5 +77,3 @@ public:
 };
 
 } // namespace tas
-
-#endif
