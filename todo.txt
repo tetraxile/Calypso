@@ -34,6 +34,7 @@
   [ ] add server connection dialog
     [ ] save server IP to local file
   [x] log
+    [ ] word wrap
   [ ] toasts/notifications?
   [ ] other visualizers? e.g. hitsensors
   [ ] add more user feedback (e.g. "Loading...", etc.)

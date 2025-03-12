@@ -115,6 +115,8 @@ void Server::handlePacket() {
 
 		log("wrote %d bytes to file '%s'", totalWritten, filePath);
 
+		Menu::log("received script '%s' (%d bytes)", scriptName, scriptLen);
+
 		break;
 	}
 	case PacketType::None:
