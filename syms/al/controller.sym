@@ -5,6 +5,8 @@ _ZN2al17isPadTriggerRightEi
 _ZN2al14isPadTriggerUpEi
 _ZN2al16isPadTriggerDownEi
 _ZN2al13isPadTriggerAEi
+_ZN2al14isPadTriggerZLEi
+_ZN2al13isPadTriggerLEi
 _ZN2al23getPlayerControllerPortEi
 _ZN2al13isPadHoldDownEi
 _ZN2al21getMainControllerPortEv

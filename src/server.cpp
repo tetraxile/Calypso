@@ -145,12 +145,12 @@ s32 Server::connect(const char* serverIP, u16 port) {
 
 	mState = State::CONNECTED;
 
+	tas::Menu::log("Connected to %s:%d!", serverIP, port);
+
 	// send message to server
 	char message[] = "connected!";
 	s32 r = nn::socket::Send(mSockFd, message, strlen(message), 0);
 	if (r < 0) return nn::socket::GetLastErrno();
-
-	tas::Menu::log("Connected to %s:%d!", serverIP, port);
 
 	mRecvThread->start();
 

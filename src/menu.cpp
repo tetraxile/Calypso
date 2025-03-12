@@ -56,7 +56,7 @@ void Menu::handleInput(s32 port) {
 	if (al::isPadTriggerDown(port)) navigate({ 0, 1 });
 	if (al::isPadTriggerLeft(port)) navigate({ -1, 0 });
 	if (al::isPadTriggerRight(port)) navigate({ 1, 0 });
-	if (al::isPadTriggerA(port)) activateItem();
+	if (al::isPadTriggerZL(port)) activateItem();
 }
 
 void Menu::drawQuad(const hk::util::Vector2f& tl, const hk::util::Vector2f& size, const sead::Color4f& color0, const sead::Color4f& color1) {
