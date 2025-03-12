@@ -12,7 +12,6 @@
 #include <nn/fs.h>
 #include <nn/fs/fs_files.h>
 #include <nn/fs/fs_types.h>
-#include <nn/nifm.h>
 #include <nn/socket.h>
 #include <sead/heap/seadDisposer.h>
 #include <sead/heap/seadHeap.h>
@@ -37,16 +36,7 @@ void Server::init(sead::Heap* heap) {
 	al::FunctorV0M functor(this, &Server::threadRecv);
 	mRecvThread = new al::AsyncFunctorThread("Recv Thread", functor, 0, 0x20000, {});
 
-	nn::Result result = nn::nifm::Initialize();
-	HK_ABORT_UNLESS(result.IsSuccess(), "nifm init failed", 0);
-
-	result = nn::socket::Initialize(socketPool, socketPoolSize, socketAllocPoolSize, 0xE);
-
-	nn::nifm::SubmitNetworkRequestAndWait();
-
-	if (!nn::nifm::IsNetworkAvailable()) {
-		HK_ABORT("network unavailable", 0);
-	}
+	nn::Result result = nn::socket::Initialize(socketPool, socketPoolSize, socketAllocPoolSize, 0xE);
 
 	disableSocketInit.installAtSym<"_ZN2nn6socket10InitializeEPvmmi">();
 }
