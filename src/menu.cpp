@@ -1,10 +1,12 @@
 #include "menu.h"
+#include "menuitem.h"
 #include "server.h"
 
 #include <hk/diag/diag.h>
 #include <hk/gfx/Util.h>
 #include <hk/util/Context.h>
 
+#include <cmath>
 #include <cstdio>
 
 #include <agl/common/aglDrawContext.h>
@@ -34,21 +36,17 @@ void Menu::init(sead::Heap* heap) {
 	mItems = sead::PtrArray<MenuItem>();
 	mItems.tryAllocBuffer(cMenuItemNumMax, heap);
 
-	MenuItem* itemConnect = addItem({ 0, 19 }, "connect", []() -> void {
+	MenuItem* itemConnect = addButton({ 0, 19 }, "connect", []() -> void {
 		tas::Server* server = tas::Server::instance();
 		s32 r = server->connect("192.168.1.215", 8171);
-		// tas::Menu* menu = tas::Menu::instance();
-		// if (r != 0)
-		//     menu->printf({ 5, 30 }, "Connection error: %s\n", strerror(r));
+		if (r != 0) tas::Menu::log("Connection error: %s\n", strerror(r));
 	});
 	itemConnect->setSpan({ 3, 1 });
-
 	mSelectedItem = itemConnect;
-	for (s32 x = 0; x < 3; x++) {
-		for (s32 y = 0; y < 5; y++) {
-			addItem({ x, 20 + y }, "item");
-		}
-	}
+
+	addButton({ 0, 20 }, "a", []() -> void { log("pressed button a"); });
+	addButton({ 1, 20 }, "b", []() -> void { log("pressed button b"); });
+	addButton({ 2, 20 }, "c", []() -> void { log("pressed button c"); });
 }
 
 void Menu::handleInput(s32 port) {
@@ -83,30 +81,64 @@ void Menu::draw() {
 	mRenderer->begin(drawContext->getCommandBuffer()->ToData()->pNvnCommandBuffer);
 	mRenderer->setGlyphHeight(mFontHeight);
 
+	// for (s32 y = 0; y < mCellResolution.y; y++) {
+	// 	for (s32 x = 0; x < mCellResolution.x; x++) {
+	// 		drawCellBackground({ x, y }, false);
+	// 	}
+	// }
+
 	for (auto& item : mItems) {
 		item.draw();
 	}
 
+	for (s32 i = 0; i < cLogEntryNumMax; i++) {
+		auto* entry = mLog[i];
+		if (!entry) break;
+
+		sead::Color4f color = mSelectedColor;
+		if (entry->age < LogEntry::cStartFade) {
+			// before cStartFade = full brightness
+		} else if (entry->age < LogEntry::cEndFade) {
+			// between cStartFade and cEndFade = fading out
+			f32 fade = (f32)(entry->age - LogEntry::cStartFade) / LogEntry::cFadeLength;
+			color.a = std::lerp(color.a, 0.0f, fade);
+		} else {
+			// after cEndFade = fully faded out
+			mLog.erase(i);
+			delete entry;
+			continue;
+		}
+
+		hk::util::Vector2i pos = { mCellResolution.x - 5, mCellResolution.y - 1 - i };
+		drawCellBackground(pos, false, { 5, 1 });
+		print(pos, color, entry->text.cstr());
+		entry->age++;
+	}
+
 	mRenderer->end();
+}
+
+void Menu::print(const hk::util::Vector2i& pos, const sead::Color4f& color, const char* str) {
+	hk::util::Vector2f printPos = cellPosToAbsolute(pos);
+
+	// draw drop shadow first
+	hk::util::Vector2f shadowPos = printPos + hk::util::Vector2f(mShadowOffset, mShadowOffset);
+	u32 shadowColor = hk::gfx::rgbaf(0.0f, 0.0f, 0.0f, color.a * 0.8f);
+	mRenderer->drawString(shadowPos, str, shadowColor);
+
+	// then draw text
+	u32 textColor = hk::gfx::rgbaf(color.r, color.g, color.b, color.a);
+	mRenderer->drawString(printPos, str, textColor);
 }
 
 void Menu::printf(const hk::util::Vector2i& pos, const sead::Color4f& color, const char* fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 
-	hk::util::Vector2f printPos = cellPosToAbsolute(pos);
-
 	char buf[128];
 	vsnprintf(buf, sizeof(buf), fmt, args);
 
-	// draw drop shadow first
-	hk::util::Vector2f shadowPos = printPos + hk::util::Vector2f(mShadowOffset, mShadowOffset);
-	u32 shadowColor = hk::gfx::rgbaf(0.0f, 0.0f, 0.0f, color.a * 0.8f);
-	mRenderer->drawString(shadowPos, buf, shadowColor);
-
-	// then draw text
-	u32 textColor = hk::gfx::rgbaf(color.r, color.g, color.b, color.a);
-	mRenderer->drawString(printPos, buf, textColor);
+	print(pos, color, buf);
 
 	va_end(args);
 }
@@ -120,8 +152,33 @@ void Menu::printf(const hk::util::Vector2i& pos, const char* fmt, ...) {
 	va_end(args);
 }
 
-MenuItem* Menu::addItem(const hk::util::Vector2i& pos, const sead::SafeString& text, ActivateFunc activateFunc) {
-	MenuItem* item = new MenuItem(this, pos, text, activateFunc);
+void Menu::log(const char* fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+
+	auto& logArr = sInstance->mLog;
+
+	auto* finalEntry = logArr[cLogEntryNumMax - 1];
+	if (finalEntry) {
+		logArr.erase(cLogEntryNumMax - 1);
+		delete finalEntry;
+	}
+
+	auto* newEntry = new (sInstance->mHeap) LogEntry;
+	newEntry->text.formatV(fmt, args);
+	logArr.pushFront(newEntry);
+
+	va_end(args);
+}
+
+MenuItem* Menu::addStatic(const hk::util::Vector2i& pos, const sead::SafeString& text) {
+	MenuItem* item = new MenuItemStatic(this, pos, text);
+	mItems.pushBack(item);
+	return item;
+}
+
+MenuItem* Menu::addButton(const hk::util::Vector2i& pos, const sead::SafeString& text, ActivateFunc activateFunc) {
+	MenuItem* item = new MenuItemButton(this, pos, text, activateFunc);
 	mItems.pushBack(item);
 	return item;
 }
@@ -132,11 +189,11 @@ void Menu::navigate(const hk::util::Vector2i& navDir) {
 	s32 nearestPerpDist = 0;
 
 	for (auto& item : mItems) {
-		if (&item == mSelectedItem) continue;
+		if (&item == mSelectedItem || !item.mIsSelectable) continue;
 
 		hk::util::Vector2i distance = item.mPos - mSelectedItem->mPos;
 		s32 navDistance = navDir.x ? distance.x * navDir.x : distance.y * navDir.y;
-		s32 perpDistance = sead::Mathf::abs(navDir.y ? distance.x : distance.y);
+		s32 perpDistance = abs(navDir.y ? distance.x : distance.y);
 		if (navDistance > 0 && (!nearestItem || perpDistance < nearestPerpDist || (navDistance < nearestDist && perpDistance == nearestPerpDist))) {
 			nearestItem = &item;
 			nearestDist = navDistance;
@@ -149,24 +206,6 @@ void Menu::navigate(const hk::util::Vector2i& navDir) {
 
 void Menu::activateItem() {
 	if (mSelectedItem && mSelectedItem->mActivateFunc) mSelectedItem->mActivateFunc();
-}
-
-MenuItem::MenuItem(Menu* menu, const hk::util::Vector2i& pos, const sead::SafeString& text, ActivateFunc activateFunc) :
-	mMenu(menu), mPos(pos), mText(text), mActivateFunc(activateFunc) {}
-
-void MenuItem::draw(const sead::Color4f& color) const {
-	mMenu->drawCellBackground(mPos, this == mMenu->mSelectedItem, mSpan);
-	mMenu->printf(mPos, color, "%s", mText.cstr());
-}
-
-void MenuItem::draw() const {
-	if (this == mMenu->mSelectedItem) {
-		mMenu->drawCellBackground(mPos, true, mSpan);
-		mMenu->printf(mPos, mMenu->mSelectedColor, ">%s", mText.cstr());
-	} else {
-		mMenu->drawCellBackground(mPos, false, mSpan);
-		mMenu->printf(mPos, mMenu->mFgColor, " %s", mText.cstr());
-	}
 }
 
 } // namespace tas

@@ -33,7 +33,8 @@
   [ ] support adding different types of cells / submenus
   [ ] add server connection dialog
     [ ] save server IP to local file
-  [ ] toasts/notifications? log?
+  [x] log
+  [ ] toasts/notifications?
   [ ] other visualizers? e.g. hitsensors
   [ ] add more user feedback (e.g. "Loading...", etc.)
 

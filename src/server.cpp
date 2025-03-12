@@ -1,4 +1,5 @@
 #include "server.h"
+#include "menu.h"
 
 #include <hk/diag/diag.h>
 #include <hk/hook/Trampoline.h>
@@ -156,6 +157,8 @@ s32 Server::connect(const char* serverIP, u16 port) {
 	char message[] = "connected!";
 	s32 r = nn::socket::Send(mSockFd, message, strlen(message), 0);
 	if (r < 0) return nn::socket::GetLastErrno();
+
+	tas::Menu::log("Connected to %s:%d!", serverIP, port);
 
 	mRecvThread->start();
 

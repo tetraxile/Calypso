@@ -10,32 +10,7 @@
 
 namespace tas {
 
-class Menu;
-
-class MenuItem {
-private:
-	using ActivateFunc = void (*)();
-
-	Menu* mMenu = nullptr;
-	hk::util::Vector2i mPos = { 0, 0 };
-	hk::util::Vector2i mSpan = { 1, 1 };
-	sead::FixedSafeString<128> mText = sead::SafeString::cEmptyString;
-	ActivateFunc mActivateFunc = nullptr;
-	bool mIsSelectable = true;
-
-public:
-	MenuItem(Menu* menu, const hk::util::Vector2i& pos, const sead::SafeString& text, ActivateFunc activateFunc = nullptr);
-	void draw(const sead::Color4f& color) const;
-	void draw() const;
-
-	void setSpan(const hk::util::Vector2i& span) { mSpan = span; }
-
-	void setText(const sead::FixedSafeString<128> text) { mText = text; }
-
-	void setSelectable(bool isSelectable) { mIsSelectable = isSelectable; }
-
-	friend class Menu;
-};
+class MenuItem;
 
 class Menu {
 	SEAD_SINGLETON_DISPOSER(Menu);
@@ -44,6 +19,16 @@ private:
 	using ActivateFunc = void (*)();
 
 	constexpr static s32 cMenuItemNumMax = 128;
+	constexpr static s32 cLogEntryNumMax = 10;
+
+	struct LogEntry {
+		constexpr static s32 cFadeLength = 30;
+		constexpr static s32 cStartFade = 270;
+		constexpr static s32 cEndFade = cStartFade + cFadeLength;
+
+		s32 age = 0;
+		sead::FixedSafeString<128> text = sead::SafeString::cEmptyString;
+	};
 
 	bool mIsActive = true;
 	sead::Heap* mHeap = nullptr;
@@ -51,7 +36,7 @@ private:
 
 	const hk::util::Vector2i mScreenResolution = { 1280, 720 };
 	hk::util::Vector2i mCellResolution = { 12, 36 };
-	hk::util::Vector2f mCellDimension = { (float)mScreenResolution.x / mCellResolution.x, (float)mScreenResolution.y / mCellResolution.y };
+	hk::util::Vector2f mCellDimension = { (f32)mScreenResolution.x / mCellResolution.x, (f32)mScreenResolution.y / mCellResolution.y };
 	f32 mFontHeight = mCellDimension.y;
 
 	sead::Color4f mFgColor = { 0.6f, 0.6f, 0.6f, 0.8f };
@@ -63,6 +48,8 @@ private:
 	sead::PtrArray<MenuItem> mItems;
 	MenuItem* mSelectedItem = nullptr;
 
+	sead::FixedPtrArray<LogEntry, cLogEntryNumMax> mLog;
+
 	hk::util::Vector2f cellPosToAbsolute(const hk::util::Vector2i& cellPos) { return { cellPos.x * mCellDimension.x, cellPos.y * mCellDimension.y }; }
 
 	void select(MenuItem* item) { mSelectedItem = item; }
@@ -73,12 +60,15 @@ private:
 public:
 	Menu() = default;
 	void init(sead::Heap* heap);
-	MenuItem* addItem(const hk::util::Vector2i& pos, const sead::SafeString& text, ActivateFunc activateFunc = nullptr);
+	MenuItem* addStatic(const hk::util::Vector2i& pos, const sead::SafeString& text);
+	MenuItem* addButton(const hk::util::Vector2i& pos, const sead::SafeString& text, ActivateFunc activateFunc);
 
 	void draw();
 	void handleInput(s32 port);
+	void print(const hk::util::Vector2i& pos, const sead::Color4f& color, const char* str);
 	void printf(const hk::util::Vector2i& pos, const sead::Color4f& color, const char* fmt, ...);
 	void printf(const hk::util::Vector2i& pos, const char* fmt, ...);
+	static void log(const char* fmt, ...);
 	void navigate(const hk::util::Vector2i& navDir);
 	void activateItem();
 

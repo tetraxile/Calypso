@@ -1,3 +1,6 @@
 @smo:100
 
 _ZN4sead12PtrArrayImpl14tryAllocBufferEiPNS_4HeapEi
+_ZN4sead12PtrArrayImpl9setBufferEiPv
+_ZN4sead12PtrArrayImpl6insertEiPv
+_ZN4sead12PtrArrayImpl5eraseEii
