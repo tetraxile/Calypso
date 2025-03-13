@@ -38,6 +38,7 @@
   [ ] toasts/notifications?
   [ ] other visualizers? e.g. hitsensors
   [ ] add more user feedback (e.g. "Loading...", etc.)
+  [ ] input display
 
 [ ] savestates (part of script format? or just game save files as part of format?)
   [ ] position, rotation, animation, camera state, 
@@ -52,7 +53,5 @@
     could be good to reduce the number of programs the user needs to use
     and helps to provide good testing material to see if converted scripts don't desync
     but also requires more maintenance if other formats continue to be used/updated
-
-[ ] make `deploy` folder for easier sending mod to switch (note that `sys/tools/deploy.py` exists)
 
 [ ] https://docs.google.com/document/d/1WEUSplw2VunYwyJE07FEZibBdUeb4LYs5hHu7LoLDF0
