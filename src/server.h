@@ -4,7 +4,7 @@
 
 #include "al/Library/Thread/AsyncFunctorThread.h"
 
-namespace tas {
+namespace cly {
 
 class Server {
 	SEAD_SINGLETON_DISPOSER(Server);
@@ -43,4 +43,4 @@ public:
 	static void log(const char* fmt, ...);
 };
 
-} // namespace tas
+} // namespace cly

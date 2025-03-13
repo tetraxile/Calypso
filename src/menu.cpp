@@ -25,7 +25,7 @@
 #include "al/Library/System/GameSystemInfo.h"
 #include "game/System/Application.h"
 
-namespace tas {
+namespace cly {
 
 SEAD_SINGLETON_DISPOSER_IMPL(Menu);
 
@@ -42,20 +42,16 @@ void Menu::init(sead::Heap* heap) {
 	fpsCounter->mDrawFunc = [](MenuItem* self) -> void {
 		s32 fps = round(Application::sInstance->getGameFramework()->calcFps());
 		self->mText.format("FPS: %d", fps);
-		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOn);
+		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
 	};
 
 	MenuItem* itemConnect = addButton({ 0, 19 }, "connect", []() -> void {
-		tas::Server* server = tas::Server::instance();
+		cly::Server* server = cly::Server::instance();
 		s32 r = server->connect("192.168.1.215", 8171);
-		if (r != 0) tas::Menu::log("Connection error: %s\n", strerror(r));
+		if (r != 0) cly::Menu::log("Connection error: %s\n", strerror(r));
 	});
-	itemConnect->mSpan = { 3, 1 };
+	itemConnect->mSpan = { 2, 1 };
 	select(itemConnect);
-
-	addButton({ 0, 20 }, "a", []() -> void { log("pressed button a"); });
-	addButton({ 1, 20 }, "b", []() -> void { log("pressed button b"); });
-	addButton({ 2, 20 }, "c", []() -> void { log("pressed button c"); });
 }
 
 void Menu::handleInput(s32 port) {
@@ -255,4 +251,4 @@ void Menu::drawCellBackground(const hk::util::Vector2i& pos, const util::Color4f
 	drawQuad(cellPosToAbsolute(pos), size, brightColor, color);
 }
 
-} // namespace tas
+} // namespace cly

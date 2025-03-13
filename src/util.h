@@ -2,7 +2,7 @@
 
 #include <hk/gfx/Util.h>
 
-namespace tas::util {
+namespace cly::util {
 
 struct Color4f {
 	float r, g, b, a;
@@ -12,4 +12,4 @@ struct Color4f {
 	operator u32() const { return toU32(); }
 };
 
-}; // namespace tas::util
+}; // namespace cly::util

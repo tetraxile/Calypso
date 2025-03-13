@@ -24,11 +24,11 @@
 
 using namespace hk;
 
-namespace tas {
+namespace cly {
 sead::Heap* initializeHeap() {
 	return sead::ExpHeap::create(0x100000, "CalypsoHeap", al::getStationedHeap(), 8, sead::Heap::cHeapDirection_Forward, false);
 }
-} // namespace tas
+} // namespace cly
 
 HkTrampoline<void, sead::FileDeviceMgr*> fileDeviceMgrHook = hk::hook::trampoline([](sead::FileDeviceMgr* fileDeviceMgr) -> void {
 	fileDeviceMgrHook.orig(fileDeviceMgr);
@@ -37,11 +37,11 @@ HkTrampoline<void, sead::FileDeviceMgr*> fileDeviceMgrHook = hk::hook::trampolin
 });
 
 HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
-	sead::Heap* heap = tas::initializeHeap();
-	tas::Server* server = tas::Server::createInstance(heap);
+	sead::Heap* heap = cly::initializeHeap();
+	cly::Server* server = cly::Server::createInstance(heap);
 	server->init(heap);
 
-	tas::Menu* menu = tas::Menu::createInstance(heap);
+	cly::Menu* menu = cly::Menu::createInstance(heap);
 	menu->init(heap);
 
 	gameSystemInit.orig(gameSystem);
@@ -50,7 +50,7 @@ HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSys
 HkTrampoline<void, GameSystem*> drawMainHook = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
 	drawMainHook.orig(gameSystem);
 
-	tas::Menu::instance()->draw();
+	cly::Menu::instance()->draw();
 });
 
 HkTrampoline<void, sead::ControllerMgr*> inputHook = hk::hook::trampoline([](sead::ControllerMgr* mgr) -> void {
@@ -58,7 +58,7 @@ HkTrampoline<void, sead::ControllerMgr*> inputHook = hk::hook::trampoline([](sea
 
 	inputHook.orig(mgr);
 
-	tas::Menu* menu = tas::Menu::instance();
+	cly::Menu* menu = cly::Menu::instance();
 	if (menu) menu->handleInput(port);
 
 	// nn::hid::NpadStyleSet styleSet = nn::hid::GetNpadStyleSet(port);

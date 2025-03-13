@@ -9,7 +9,7 @@
 #include <sead/prim/seadSafeString.h>
 #include "menuitem.h"
 
-namespace tas {
+namespace cly {
 
 class MenuItem;
 
@@ -78,4 +78,4 @@ public:
 	friend class MenuItem;
 };
 
-} // namespace tas
+} // namespace cly

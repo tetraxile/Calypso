@@ -1,7 +1,7 @@
 #include "menuitem.h"
 #include "menu.h"
 
-namespace tas {
+namespace cly {
 
 MenuItem::MenuItem(Menu* menu, const hk::util::Vector2i& pos, const sead::FixedSafeString<128>& text) : mMenu(menu), mPos(pos), mText(text) {}
 
@@ -30,4 +30,4 @@ void MenuItemButton::draw() const {
 		draw_(cFgColorOff, cBgColorOff);
 }
 
-} // namespace tas
+} // namespace cly

@@ -25,7 +25,7 @@ static constexpr int socketPoolSize = 0x600000;
 static constexpr int socketAllocPoolSize = 0x20000;
 char socketPool[socketPoolSize + socketAllocPoolSize] __attribute__((aligned(0x1000)));
 
-namespace tas {
+namespace cly {
 
 SEAD_SINGLETON_DISPOSER_IMPL(Server);
 
@@ -145,7 +145,7 @@ s32 Server::connect(const char* serverIP, u16 port) {
 
 	mState = State::CONNECTED;
 
-	tas::Menu::log("Connected to %s:%d!", serverIP, port);
+	cly::Menu::log("Connected to %s:%d!", serverIP, port);
 
 	// send message to server
 	char message[] = "connected!";
@@ -170,4 +170,4 @@ void Server::log(const char* fmt, ...) {
 	va_end(args);
 }
 
-} // namespace tas
+} // namespace cly

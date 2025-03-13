@@ -6,7 +6,7 @@
 
 #include <sead/prim/seadSafeString.h>
 
-namespace tas {
+namespace cly {
 
 class Menu;
 
@@ -51,4 +51,4 @@ public:
 	void draw() const override;
 };
 
-} // namespace tas
+} // namespace cly
