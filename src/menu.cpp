@@ -70,22 +70,40 @@ void Menu::handleInput(s32 port) {
 	if (al::isPadTriggerZL(port)) activateItem();
 }
 
-void Menu::drawQuad(const hk::util::Vector2f& tl, const hk::util::Vector2f& size, const util::Color4f& color0, const util::Color4f& color1) {
-	mRenderer->drawQuad(
-		{ { tl.x, tl.y }, { 0, 0 }, color0 }, { { tl.x + size.x, tl.y }, { 1.0, 0 }, color0 }, { { tl.x + size.x, tl.y + size.y }, { 1.0, 1.0 }, color1 },
-		{ { tl.x, tl.y + size.y }, { 0, 1.0 }, color1 }
-	);
+void Menu::navigate(const hk::util::Vector2i& navDir) {
+	MenuItem* nearestItem = nullptr;
+	s32 nearestDist = 0;
+	s32 nearestPerpDist = 0;
+
+	for (auto& item : mItems) {
+		if (&item == mSelectedItem || !item.mIsSelectable) continue;
+
+		hk::util::Vector2i distance = item.mPos - mSelectedItem->mPos;
+		// signed distance to item along navigation direction
+		s32 navDistance = navDir.x ? distance.x * navDir.x : distance.y * navDir.y;
+		// perpendicular distance from navigation direction to item
+		u32 perpDistance = abs(navDir.y ? distance.x : distance.y);
+
+		// if item is not in navigation direction, discard
+		if (navDistance <= 0) continue;
+
+		// if there is not yet a nearest item...
+		// or this item is closer perpendicularly than the current nearest item...
+		// or this item is parallel to the current nearest item AND closer...
+		if (!nearestItem || perpDistance < nearestPerpDist || (perpDistance == nearestPerpDist && navDistance < nearestDist)) {
+			// ...then this is the new nearest item
+			nearestItem = &item;
+			nearestDist = navDistance;
+			nearestPerpDist = perpDistance;
+		}
+	}
+
+	if (nearestItem) select(nearestItem);
 }
 
-void Menu::drawCellBackground(const hk::util::Vector2i& pos, const util::Color4f& color, const hk::util::Vector2i& span) {
-	hk::util::Vector2f size = mCellDimension * span - hk::util::Vector2f(1.0f, 1.0f);
-	util::Color4f brightColor;
-	brightColor.r = fmin(1.0f, color.r * 1.4f);
-	brightColor.g = fmin(1.0f, color.g * 1.4f);
-	brightColor.b = fmin(1.0f, color.b * 1.4f);
-	brightColor.a = color.a;
-	drawQuad(cellPosToAbsolute(pos), size, brightColor, color);
-}
+/*
+ * ================ DRAWING ================
+ */
 
 void Menu::draw() {
 	if (!isActive()) return;
@@ -144,17 +162,24 @@ void Menu::drawLog() {
 	}
 }
 
-void Menu::print(const hk::util::Vector2i& pos, const util::Color4f& color, const char* str) {
-	hk::util::Vector2f printPos = cellPosToAbsolute(pos);
+/*
+ * ================ UTILS ================
+ */
 
+void Menu::printAbs(const hk::util::Vector2f pos, const util::Color4f& color, const char* str) {
 	// draw drop shadow first
-	hk::util::Vector2f shadowPos = printPos + hk::util::Vector2f(mShadowOffset, mShadowOffset);
+	hk::util::Vector2f shadowPos = pos + hk::util::Vector2f(mShadowOffset, mShadowOffset);
 	f32 shadowAlpha = fmax(0.0f, color.a - 0.2f);
 	u32 shadowColor = hk::gfx::rgbaf(0.0f, 0.0f, 0.0f, shadowAlpha);
 	mRenderer->drawString(shadowPos, str, shadowColor);
 
 	// then draw text
-	mRenderer->drawString(printPos, str, color);
+	mRenderer->drawString(pos, str, color);
+}
+
+void Menu::print(const hk::util::Vector2i& pos, const util::Color4f& color, const char* str) {
+	hk::util::Vector2f printPos = cellPosToAbsolute(pos);
+	printAbs(printPos, color, str);
 }
 
 void Menu::printf(const hk::util::Vector2i& pos, const util::Color4f& color, const char* fmt, ...) {
@@ -209,39 +234,25 @@ MenuItem* Menu::addButton(const hk::util::Vector2i& pos, const sead::SafeString&
 	return item;
 }
 
-void Menu::navigate(const hk::util::Vector2i& navDir) {
-	MenuItem* nearestItem = nullptr;
-	s32 nearestDist = 0;
-	s32 nearestPerpDist = 0;
-
-	for (auto& item : mItems) {
-		if (&item == mSelectedItem || !item.mIsSelectable) continue;
-
-		hk::util::Vector2i distance = item.mPos - mSelectedItem->mPos;
-		// signed distance to item along navigation direction
-		s32 navDistance = navDir.x ? distance.x * navDir.x : distance.y * navDir.y;
-		// perpendicular distance from navigation direction to item
-		u32 perpDistance = abs(navDir.y ? distance.x : distance.y);
-
-		// if item is not in navigation direction, discard
-		if (navDistance <= 0) continue;
-
-		// if there is not yet a nearest item...
-		// or this item is closer perpendicularly than the current nearest item...
-		// or this item is parallel to the current nearest item AND closer...
-		if (!nearestItem || perpDistance < nearestPerpDist || (perpDistance == nearestPerpDist && navDistance < nearestDist)) {
-			// ...then this is the new nearest item
-			nearestItem = &item;
-			nearestDist = navDistance;
-			nearestPerpDist = perpDistance;
-		}
-	}
-
-	if (nearestItem) select(nearestItem);
-}
-
 void Menu::activateItem() {
 	if (mSelectedItem && mSelectedItem->mActivateFunc) mSelectedItem->mActivateFunc();
+}
+
+void Menu::drawQuad(const hk::util::Vector2f& tl, const hk::util::Vector2f& size, const util::Color4f& color0, const util::Color4f& color1) {
+	mRenderer->drawQuad(
+		{ { tl.x, tl.y }, { 0, 0 }, color0 }, { { tl.x + size.x, tl.y }, { 1.0, 0 }, color0 }, { { tl.x + size.x, tl.y + size.y }, { 1.0, 1.0 }, color1 },
+		{ { tl.x, tl.y + size.y }, { 0, 1.0 }, color1 }
+	);
+}
+
+void Menu::drawCellBackground(const hk::util::Vector2i& pos, const util::Color4f& color, const hk::util::Vector2i& span) {
+	hk::util::Vector2f size = mCellDimension * span - hk::util::Vector2f(1.0f, 1.0f);
+	util::Color4f brightColor;
+	brightColor.r = fmin(1.0f, color.r * 1.4f);
+	brightColor.g = fmin(1.0f, color.g * 1.4f);
+	brightColor.b = fmin(1.0f, color.b * 1.4f);
+	brightColor.a = color.a;
+	drawQuad(cellPosToAbsolute(pos), size, brightColor, color);
 }
 
 } // namespace tas
