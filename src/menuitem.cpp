@@ -6,22 +6,28 @@ namespace tas {
 MenuItem::MenuItem(Menu* menu, const hk::util::Vector2i& pos, const sead::FixedSafeString<128>& text) : mMenu(menu), mPos(pos), mText(text) {}
 
 void MenuItem::draw() const {
-	if (this == mMenu->mSelectedItem) {
-		mMenu->drawCellBackground(mPos, true, mSpan);
-		mMenu->printf(mPos, mMenu->mSelectedColor, ">%s", mText.cstr());
-	} else {
-		mMenu->drawCellBackground(mPos, false, mSpan);
-		mMenu->printf(mPos, mMenu->mFgColor, " %s", mText.cstr());
-	}
+	draw_(cFgColorOn, cBgColorOff);
 }
 
-MenuItemStatic::MenuItemStatic(Menu* menu, const hk::util::Vector2i& pos, const sead::FixedSafeString<128>& text) : MenuItem(menu, pos, text) {
-	setSelectable(false);
+void MenuItem::draw_(const util::Color4f& fgColor, const util::Color4f& bgColor) const {
+	mMenu->drawCellBackground(mPos, bgColor, mSpan);
+	mMenu->printf(mPos, fgColor, " %s", mText.cstr());
 }
 
-MenuItemButton::MenuItemButton(Menu* menu, const hk::util::Vector2i& pos, const sead::FixedSafeString<128>& text, ActivateFunc activateFunc) :
+MenuItemText::MenuItemText(Menu* menu, const hk::util::Vector2i& pos, const sead::FixedSafeString<128>& text) : MenuItem(menu, pos, text) {
+	mIsSelectable = false;
+}
+
+MenuItemButton::MenuItemButton(Menu* menu, const hk::util::Vector2i& pos, const sead::FixedSafeString<128>& text, FuncVoid activateFunc) :
 	MenuItem(menu, pos, text) {
-	setActivateFunc(activateFunc);
+	mActivateFunc = activateFunc;
+}
+
+void MenuItemButton::draw() const {
+	if (mIsSelected)
+		draw_(cFgColorOn, cBgColorOn);
+	else
+		draw_(cFgColorOff, cBgColorOff);
 }
 
 } // namespace tas
