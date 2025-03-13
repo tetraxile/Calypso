@@ -85,9 +85,9 @@ HkTrampoline<void, sead::ControllerMgr*> inputHook = hk::hook::trampoline([](sea
 // });
 
 extern "C" void hkMain() {
+	hk::gfx::DebugRenderer::instance()->installHooks();
 	gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
 	drawMainHook.installAtSym<"_ZN10GameSystem8drawMainEv">();
 	inputHook.installAtSym<"_ZN4sead13ControllerMgr4calcEv">();
 	fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
-	hk::gfx::DebugRenderer::instance()->installHooks();
 }

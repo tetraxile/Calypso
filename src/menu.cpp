@@ -59,6 +59,8 @@ void Menu::init(sead::Heap* heap) {
 }
 
 void Menu::handleInput(s32 port) {
+	if (al::isPadHoldZR(port) && al::isPadTriggerZL(port)) mIsActive = !mIsActive;
+
 	if (!isActive()) return;
 
 	if (al::isPadTriggerUp(port)) navigate({ 0, -1 });
@@ -86,6 +88,8 @@ void Menu::drawCellBackground(const hk::util::Vector2i& pos, const util::Color4f
 }
 
 void Menu::draw() {
+	if (!isActive()) return;
+
 	for (auto& item : mItems) {
 		if (item.mUpdateFunc) item.mUpdateFunc(&item);
 	}
@@ -97,14 +101,19 @@ void Menu::draw() {
 
 	// draw menu items
 	for (auto& item : mItems) {
-		if (item.mDrawFunc) {
+		if (item.mDrawFunc)
 			item.mDrawFunc(&item);
-			continue;
-		}
-		item.draw();
+		else
+			item.draw();
 	}
 
 	// draw log entries
+	drawLog();
+
+	mRenderer->end();
+}
+
+void Menu::drawLog() {
 	for (s32 i = 0; i < cLogEntryNumMax; i++) {
 		auto* entry = mLog[i];
 		if (!entry) break;
@@ -133,8 +142,6 @@ void Menu::draw() {
 		print(pos, color, entry->text.cstr());
 		entry->age++;
 	}
-
-	mRenderer->end();
 }
 
 void Menu::print(const hk::util::Vector2i& pos, const util::Color4f& color, const char* str) {

@@ -54,6 +54,11 @@ private:
 
 	void drawQuad(const hk::util::Vector2f& pos, const hk::util::Vector2f& size, const util::Color4f& color0, const util::Color4f& color1);
 	void drawCellBackground(const hk::util::Vector2i& pos, const util::Color4f& color, const hk::util::Vector2i& span);
+	void drawLog();
+
+	void print(const hk::util::Vector2i& pos, const util::Color4f& color, const char* str);
+	void printf(const hk::util::Vector2i& pos, const util::Color4f& color, const char* fmt, ...);
+	void printf(const hk::util::Vector2i& pos, const char* fmt, ...);
 
 public:
 	Menu() = default;
@@ -63,9 +68,6 @@ public:
 
 	void draw();
 	void handleInput(s32 port);
-	void print(const hk::util::Vector2i& pos, const util::Color4f& color, const char* str);
-	void printf(const hk::util::Vector2i& pos, const util::Color4f& color, const char* fmt, ...);
-	void printf(const hk::util::Vector2i& pos, const char* fmt, ...);
 	static void log(const char* fmt, ...);
 	void navigate(const hk::util::Vector2i& navDir);
 	void activateItem();
