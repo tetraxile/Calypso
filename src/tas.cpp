@@ -19,6 +19,10 @@ void System::init(sead::Heap* heap) {
 void System::loadScript(const sead::SafeString& filename) {
 	System* self = instance();
 
+	if (self->mScriptInfo.isLoaded) {
+		unloadScript();
+	}
+
 	char filePath[0x200];
 	snprintf(filePath, sizeof(filePath), "sd:/Calypso/scripts/%s", filename.cstr());
 
