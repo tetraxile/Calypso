@@ -1,5 +1,6 @@
 #include "menu.h"
 #include "server.h"
+#include "tas.h"
 
 #include <hk/Result.h>
 #include <hk/diag/diag.h>
@@ -26,7 +27,7 @@ using namespace hk;
 
 namespace cly {
 sead::Heap* initializeHeap() {
-	return sead::ExpHeap::create(0x100000, "CalypsoHeap", al::getStationedHeap(), 8, sead::Heap::cHeapDirection_Forward, false);
+	return sead::ExpHeap::create(1_MB, "CalypsoHeap", al::getStationedHeap(), 8, sead::Heap::cHeapDirection_Forward, false);
 }
 } // namespace cly
 
@@ -38,11 +39,14 @@ HkTrampoline<void, sead::FileDeviceMgr*> fileDeviceMgrHook = hk::hook::trampolin
 
 HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
 	sead::Heap* heap = cly::initializeHeap();
+	cly::Menu* menu = cly::Menu::createInstance(heap);
+	menu->init(heap);
+
 	cly::Server* server = cly::Server::createInstance(heap);
 	server->init(heap);
 
-	cly::Menu* menu = cly::Menu::createInstance(heap);
-	menu->init(heap);
+	cly::tas::System* system = cly::tas::System::createInstance(heap);
+	system->init(heap);
 
 	gameSystemInit.orig(gameSystem);
 });
@@ -84,10 +88,20 @@ HkTrampoline<void, sead::ControllerMgr*> inputHook = hk::hook::trampoline([](sea
 //     out->y = 0.0f;
 // });
 
+// void seadPrintHook(const char* fmt, ...) {
+// 	va_list args;
+// 	va_start(args, fmt);
+//
+// 	cly::Server::log(fmt, args);
+//
+// 	va_end(args);
+// }
+
 extern "C" void hkMain() {
 	hk::gfx::DebugRenderer::instance()->installHooks();
 	gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
 	drawMainHook.installAtSym<"_ZN10GameSystem8drawMainEv">();
 	inputHook.installAtSym<"_ZN4sead13ControllerMgr4calcEv">();
 	fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
+	// hk::hook::writeBranchAtSym<"_ZN4sead6system5PrintEPKcz">(seadPrintHook);
 }

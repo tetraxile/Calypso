@@ -1,6 +1,7 @@
 #include "menu.h"
 #include "menuitem.h"
 #include "server.h"
+#include "tas.h"
 #include "util.h"
 
 #include <hk/diag/diag.h>
@@ -15,7 +16,6 @@
 #include <sead/controller/seadControllerAddon.h>
 #include <sead/controller/seadControllerMgr.h>
 #include <sead/controller/seadControllerWrapper.h>
-#include <sead/gfx/seadOrthoProjection.h>
 #include <sead/heap/seadHeapMgr.h>
 #include <sead/prim/seadRuntimeTypeInfo.h>
 
@@ -52,6 +52,8 @@ void Menu::init(sead::Heap* heap) {
 	});
 	itemConnect->mSpan = { 2, 1 };
 	select(itemConnect);
+
+	addButton({ 0, 21 }, "load script", []() -> void { tas::System::loadScript("1-11.stas"); })->mSpan = { 2, 1 };
 }
 
 void Menu::handleInput(s32 port) {

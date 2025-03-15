@@ -1,5 +1,6 @@
 #include "server.h"
 #include "menu.h"
+#include "util.h"
 
 #include <hk/diag/diag.h>
 #include <hk/hook/Trampoline.h>
@@ -36,7 +37,7 @@ void Server::init(sead::Heap* heap) {
 	al::FunctorV0M functor(this, &Server::threadRecv);
 	mRecvThread = new al::AsyncFunctorThread("Recv Thread", functor, 0, 0x20000, {});
 
-	nn::Result result = nn::socket::Initialize(socketPool, socketPoolSize, socketAllocPoolSize, 0xE);
+	nn::socket::Initialize(socketPool, socketPoolSize, socketAllocPoolSize, 0xE);
 
 	disableSocketInit.installAtSym<"_ZN2nn6socket10InitializeEPvmmi">();
 }
@@ -80,24 +81,10 @@ void Server::handlePacket() {
 		char filePath[0x200];
 		snprintf(filePath, sizeof(filePath), "sd:/Calypso/scripts/%s", scriptName);
 
-		// TODO: replace these aborts with proper logs
-		nn::Result r;
-
-		nn::fs::DirectoryEntryType entryType;
-		r = nn::fs::GetEntryType(&entryType, filePath);
-		// HK_ABORT_UNLESS_R(hk::Result(r.GetInnerValueForDebug()));
-
-		if (entryType == nn::fs::DirectoryEntryType_File) {
-			r = nn::fs::DeleteFile(filePath);
-			HK_ABORT_UNLESS_R(hk::Result(r.GetInnerValueForDebug()));
-		}
-
-		r = nn::fs::CreateFile(filePath, scriptLen);
-		HK_ABORT_UNLESS_R(hk::Result(r.GetInnerValueForDebug()));
+		util::createFile(filePath, scriptLen, true);
 
 		nn::fs::FileHandle fileHandle;
-		r = nn::fs::OpenFile(&fileHandle, filePath, nn::fs::OpenMode_Write);
-		HK_ABORT_UNLESS_R(hk::Result(r.GetInnerValueForDebug()));
+		LOG_R(nn::fs::OpenFile(&fileHandle, filePath, nn::fs::OpenMode_Write));
 
 		u8 chunkBuf[0x10000];
 		memset(chunkBuf, 0, sizeof(chunkBuf));
@@ -105,9 +92,7 @@ void Server::handlePacket() {
 		while (totalWritten < scriptLen) {
 			s32 remaining = scriptLen - totalWritten;
 			s32 chunkLen = recvAll(chunkBuf, sead::Mathf::min(remaining, sizeof(chunkBuf)));
-			// log("write: offset %#x, chunk len %#x", totalWritten, chunkLen);
-			r = nn::fs::WriteFile(fileHandle, totalWritten, chunkBuf, chunkLen, nn::fs::WriteOption::CreateOption(nn::fs::WriteOptionFlag_Flush));
-			HK_ABORT_UNLESS_R(hk::Result(r.GetInnerValueForDebug()));
+			LOG_R(nn::fs::WriteFile(fileHandle, totalWritten, chunkBuf, chunkLen, nn::fs::WriteOption::CreateOption(nn::fs::WriteOptionFlag_Flush)));
 			totalWritten += chunkLen;
 		}
 
@@ -158,13 +143,15 @@ s32 Server::connect(const char* serverIP, u16 port) {
 }
 
 void Server::log(const char* fmt, ...) {
+	Server* server = instance();
+	if (server->mState != Server::State::CONNECTED) return;
+
 	va_list args;
 	va_start(args, fmt);
 
 	char message[0x400];
 	vsnprintf(message, sizeof(message), fmt, args);
 
-	Server* server = instance();
 	s32 r = nn::socket::Send(server->mSockFd, message, strlen(message), 0);
 
 	va_end(args);
