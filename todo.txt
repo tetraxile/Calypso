@@ -30,7 +30,7 @@
     [x] navigation
     [x] cell-based
     [x] background
-  [ ] support adding different types of cells / submenus
+  [x] support adding different types of cells / submenus
   [ ] add server connection dialog
     [ ] save server IP to local file
   [x] log
