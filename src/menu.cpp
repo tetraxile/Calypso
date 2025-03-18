@@ -53,7 +53,7 @@ void Menu::init(sead::Heap* heap) {
 	itemConnect->mSpan = { 2, 1 };
 	select(itemConnect);
 
-	addButton({ 0, 21 }, "load script", []() -> void { tas::System::loadScript("1-11.stas"); })->mSpan = { 2, 1 };
+	addButton({ 0, 21 }, "load script", []() -> void { tas::System::loadScript("jump.stas"); })->mSpan = { 2, 1 };
 	// TODO: grey button out if script not loaded
 	addButton({ 0, 22 }, "start replay", []() -> void { tas::System::startReplay(); })->mSpan = { 2, 1 };
 	addButton({ 0, 23 }, "step frame", []() -> void { tas::System::getNextFrame(); })->mSpan = { 2, 1 };

@@ -75,7 +75,6 @@ private:
 	u32 mCommandIdx = 0;
 	u32 mFrameIdx = 0;
 	u32 mNextFrameIdx = 0;
-	u32 mInputFrame = 0;
 	bool mIsReplaying = false;
 	InputFrame mPrevFrame;
 	InputFrame mCurFrame;

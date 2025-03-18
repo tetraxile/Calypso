@@ -158,6 +158,8 @@ void System::getNextFrame() {
 
 void System::startReplay() {
 	System* self = instance();
+	if (self->mIsReplaying) return;
+
 	if (!self->mScriptData) {
 		Menu::log("ERROR: no script loaded");
 		return;
@@ -198,6 +200,8 @@ void System::unloadScript() {
 	self->mScriptInfo.clear();
 	self->mCursor = 0;
 	self->mCommandIdx = 0;
+	self->mFrameIdx = 0;
+	self->mNextFrameIdx = 0;
 	delete self->mScriptData;
 	self->mScriptData = nullptr;
 }
