@@ -5,7 +5,7 @@
 #include <nn/types.h>
 #include <sead/prim/seadSafeString.h>
 
-#define TITLE_ID 0x0100000000010000
+#define TITLE_ID HK_TITLE_ID
 #define FORMAT_VERSION 0
 #define ADDONS_VERSION 0
 #define EDITOR_VERSION 0
