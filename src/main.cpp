@@ -26,8 +26,14 @@
 using namespace hk;
 
 namespace cly {
+bool gIsInitialized = false;
+
 sead::Heap* initializeHeap() {
 	return sead::ExpHeap::create(1_MB, "CalypsoHeap", al::getStationedHeap(), 8, sead::Heap::cHeapDirection_Forward, false);
+}
+
+void endInit() {
+	gIsInitialized = true;
 }
 } // namespace cly
 
@@ -47,6 +53,8 @@ HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSys
 
 	cly::tas::System* system = cly::tas::System::createInstance(heap);
 	system->init(heap);
+
+	cly::endInit();
 
 	gameSystemInit.orig(gameSystem);
 });

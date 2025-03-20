@@ -2,3 +2,4 @@
 
 _ZN4sead13ControllerMgr9sInstanceE
 _ZN4sead13ControllerMgr4calcEv
+_ZNK4sead13ControllerMgr20getControllerByOrderENS_16ControllerDefine12ControllerIdEi

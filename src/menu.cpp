@@ -20,7 +20,6 @@
 #include <sead/prim/seadRuntimeTypeInfo.h>
 
 #include "al/Library/Controller/InputFunction.h"
-#include "al/Library/Controller/PadReplayFunction.h"
 #include "al/Library/Framework/GameFrameworkNx.h"
 #include "al/Library/System/GameSystemInfo.h"
 #include "game/System/Application.h"
@@ -60,7 +59,7 @@ void Menu::init(sead::Heap* heap) {
 }
 
 void Menu::handleInput(s32 port) {
-	if (al::isPadHoldZR(port) && al::isPadTriggerZL(port)) mIsActive = !mIsActive;
+	if (al::isPadHoldZL(port) && al::isPadTriggerZR(port)) mIsActive = !mIsActive;
 
 	if (!isActive()) return;
 
@@ -68,7 +67,7 @@ void Menu::handleInput(s32 port) {
 	if (al::isPadTriggerDown(port)) navigate({ 0, 1 });
 	if (al::isPadTriggerLeft(port)) navigate({ -1, 0 });
 	if (al::isPadTriggerRight(port)) navigate({ 1, 0 });
-	if (al::isPadTriggerZL(port)) activateItem();
+	if (al::isPadTriggerZR(port)) activateItem();
 }
 
 void Menu::navigate(const hk::util::Vector2i& navDir) {
@@ -199,7 +198,10 @@ void Menu::printf(const hk::util::Vector2i& pos, const char* fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 
-	printf(pos, MenuItem::cFgColorOff, fmt, args);
+	char buf[128];
+	vsnprintf(buf, sizeof(buf), fmt, args);
+
+	print(pos, MenuItem::cFgColorOn, buf);
 
 	va_end(args);
 }
