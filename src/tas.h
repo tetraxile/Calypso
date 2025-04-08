@@ -26,7 +26,6 @@ struct ScriptHeader {
 #pragma pack(pop)
 
 struct InputFrame {
-	u64 padTrig = 0;
 	u64 padHold = 0;
 	sead::Vector2f leftStick = sead::Vector2f::zero;
 	sead::Vector2f rightStick = sead::Vector2f::zero;
@@ -88,7 +87,12 @@ public:
 	static void stopReplay();
 	static bool isReplaying();
 	static u32 getFrameCount(); // is this possible to implement with stas format?
-	static void getNextFrame();
+	static bool getNextFrame(InputFrame* out);
 };
+
+void pause();
+void play();
+void togglePause();
+void advanceFrame();
 
 } // namespace cly::tas

@@ -188,7 +188,7 @@ def serve_switch():
 
         try:
             while True:
-                data = client_sock.recv(1024).decode("latin-1")
+                data = client_sock.recv(1024).decode("utf-8")
                 if not data:
                     log("switch", f"received 0 bytes")
                     break

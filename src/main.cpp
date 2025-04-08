@@ -10,6 +10,7 @@
 
 #include <agl/common/aglDrawContext.h>
 #include <nn/fs.h>
+#include <nn/hid.h>
 #include <sead/controller/seadControllerAddon.h>
 #include <sead/controller/seadControllerMgr.h>
 #include <sead/filedevice/seadFileDeviceMgr.h>
@@ -19,7 +20,6 @@
 
 #include "al/Library/Controller/InputFunction.h"
 #include "al/Library/Controller/NpadController.h"
-#include "al/Library/Controller/PadReplayFunction.h"
 #include "al/Library/Memory/HeapUtil.h"
 #include "game/System/GameSystem.h"
 
@@ -50,6 +50,7 @@ HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSys
 
 	cly::Server* server = cly::Server::createInstance(heap);
 	server->init(heap);
+	server->connect("192.168.1.215", 8171);
 
 	cly::tas::System* system = cly::tas::System::createInstance(heap);
 	system->init(heap);
@@ -65,29 +66,24 @@ HkTrampoline<void, GameSystem*> drawMainHook = hk::hook::trampoline([](GameSyste
 	cly::Menu::instance()->draw();
 });
 
-HkTrampoline<void, sead::ControllerMgr*> inputHook = hk::hook::trampoline([](sead::ControllerMgr* mgr) -> void {
-	s32 port = al::getMainControllerPort();
+bool isPressedA = false;
 
-	inputHook.orig(mgr);
+HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::NpadController* controller) -> void {
+	inputHook.orig(controller);
 
-	cly::Menu* menu = cly::Menu::instance();
-	if (menu) menu->handleInput(port);
+	if (!cly::gIsInitialized) return;
 
-	// nn::hid::NpadStyleSet styleSet = nn::hid::GetNpadStyleSet(port);
-
-	// nn::hid::NpadBaseState* state = nullptr;
-	// if (styleSet.Test(int(nn::hid::NpadStyleTag::NpadStyleFullKey)))
-	//     nn::hid::GetNpadStates((nn::hid::NpadFullKeyState*)state, 0x10, port);
-	// else if (styleSet.Test(int(nn::hid::NpadStyleTag::NpadStyleHandheld)))
-	//     nn::hid::GetNpadStates((nn::hid::NpadHandheldState*)state, 0x10, port);
-	// else if (styleSet.Test(int(nn::hid::NpadStyleTag::NpadStyleJoyDual)))
-	//     nn::hid::GetNpadStates((nn::hid::NpadJoyDualState*)state, 0x10, port);
-	// else if (styleSet.Test(int(nn::hid::NpadStyleTag::NpadStyleJoyLeft)))
-	//     nn::hid::GetNpadStates((nn::hid::NpadJoyLeftState*)state, 0x10, port);
-	// else if (styleSet.Test(int(nn::hid::NpadStyleTag::NpadStyleJoyRight)))
-	//     nn::hid::GetNpadStates((nn::hid::NpadJoyRightState*)state, 0x10, port);
-
-	// if (!state) return;
+	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
+		// player 1
+		controller->mPadHold.changeBit(sead::Controller::cPadIdx_A, isPressedA);
+		isPressedA = isPressedA ^ 1;
+		// cly::Menu::log(
+		// 	"%d %d %d %d %08x %d", controller->mIsConnected ? 1 : 0, controller->mControllerMode, controller->mNpadId, controller->mNpadStyleTag,
+		// 	controller->mPadHold, controller->mSamplingNumber
+		// );
+	} else if (controller->mControllerMode == 1) {
+		// player 2
+	}
 });
 
 // HkTrampoline<void, sead::Vector2f*, const al::CameraPoser*> cameraRotateHook =
@@ -96,20 +92,10 @@ HkTrampoline<void, sead::ControllerMgr*> inputHook = hk::hook::trampoline([](sea
 //     out->y = 0.0f;
 // });
 
-// void seadPrintHook(const char* fmt, ...) {
-// 	va_list args;
-// 	va_start(args, fmt);
-//
-// 	cly::Server::log(fmt, args);
-//
-// 	va_end(args);
-// }
-
 extern "C" void hkMain() {
 	hk::gfx::DebugRenderer::instance()->installHooks();
 	gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
 	drawMainHook.installAtSym<"_ZN10GameSystem8drawMainEv">();
-	inputHook.installAtSym<"_ZN4sead13ControllerMgr4calcEv">();
+	inputHook.installAtSym<"_ZN2al14NpadController9calcImpl_Ev">();
 	fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
-	// hk::hook::writeBranchAtSym<"_ZN4sead6system5PrintEPKcz">(seadPrintHook);
 }

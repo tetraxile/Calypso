@@ -106,7 +106,6 @@ bool System::tryReadCommand(CommandType* cmdType) {
 		mNextFrameIdx = read<u32>();
 	} else if (type == CommandType::CONTROLLER) {
 		Menu::log("command: CONTROLLER");
-		mPrevFrame = mCurFrame;
 
 		u8 playerID = read<u8>();
 		mCursor += 3;
@@ -119,7 +118,6 @@ bool System::tryReadCommand(CommandType* cmdType) {
 		mCurFrame.padHold = buttons;
 		mCurFrame.leftStick = { (f32)leftStickX, (f32)leftStickY };
 		mCurFrame.rightStick = { (f32)rightStickX, (f32)rightStickY };
-		mCurFrame.padTrig = ~mPrevFrame.padHold & mCurFrame.padHold;
 	} else {
 		Menu::log("ERROR: unsupported command type %d", type);
 		mCursor -= 4;
@@ -132,11 +130,11 @@ bool System::tryReadCommand(CommandType* cmdType) {
 	return true;
 }
 
-void System::getNextFrame() {
+bool System::getNextFrame(InputFrame* out) {
 	System* self = instance();
 	if (!self->mScriptData || !self->isReplaying()) {
 		Menu::log("ERROR: no script loaded");
-		return;
+		return false;
 	}
 
 	CommandType cmdType = CommandType::INVALID;
@@ -146,14 +144,18 @@ void System::getNextFrame() {
 			// if script ends or errors then stop replaying
 			if (!self->tryReadCommand(&cmdType)) {
 				self->stopReplay();
-				return;
+				return false;
 			}
 		} while (cmdType != CommandType::FRAME);
 	}
 
-	Menu::log("%03d: %016lx %016lx", self->mFrameIdx, self->mCurFrame.padTrig, self->mCurFrame.padHold);
+	Menu::log("%03d: %016lx %016lx", self->mFrameIdx, self->mCurFrame.padHold);
+
+	*out = { self->mCurFrame };
 
 	self->mFrameIdx++;
+
+	return true;
 }
 
 void System::startReplay() {
@@ -211,5 +213,13 @@ void System::ScriptInfo::clear() {
 	playerCount = 0;
 	commandCount = 0;
 }
+
+void pause() {}
+
+void play() {}
+
+void togglePause() {}
+
+void advanceFrame() {}
 
 } // namespace cly::tas

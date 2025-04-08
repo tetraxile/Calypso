@@ -55,7 +55,8 @@ void Menu::init(sead::Heap* heap) {
 	addButton({ 0, 21 }, "load script", []() -> void { tas::System::loadScript("jump.stas"); })->mSpan = { 2, 1 };
 	// TODO: grey button out if script not loaded
 	addButton({ 0, 22 }, "start replay", []() -> void { tas::System::startReplay(); })->mSpan = { 2, 1 };
-	addButton({ 0, 23 }, "step frame", []() -> void { tas::System::getNextFrame(); })->mSpan = { 2, 1 };
+	addButton({ 0, 23 }, "pause game", []() -> void { tas::pause(); })->mSpan = { 2, 1 };
+	addButton({ 0, 24 }, "step frame", []() -> void { tas::advanceFrame(); })->mSpan = { 2, 1 };
 }
 
 void Menu::handleInput(s32 port) {
