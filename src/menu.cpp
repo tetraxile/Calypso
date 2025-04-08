@@ -55,20 +55,31 @@ void Menu::init(sead::Heap* heap) {
 	addButton({ 0, 21 }, "load script", []() -> void { tas::System::loadScript("jump.stas"); })->mSpan = { 2, 1 };
 	// TODO: grey button out if script not loaded
 	addButton({ 0, 22 }, "start replay", []() -> void { tas::System::startReplay(); })->mSpan = { 2, 1 };
-	addButton({ 0, 23 }, "pause game", []() -> void { tas::pause(); })->mSpan = { 2, 1 };
-	addButton({ 0, 24 }, "step frame", []() -> void { tas::advanceFrame(); })->mSpan = { 2, 1 };
+	addButton({ 0, 23 }, "toggle pause", []() -> void { tas::Pauser::instance()->togglePause(); })->mSpan = { 2, 1 };
+	addButton({ 0, 24 }, "advance frame", []() -> void { tas::Pauser::instance()->advanceFrame(); })->mSpan = { 2, 1 };
 }
 
-void Menu::handleInput(s32 port) {
-	if (al::isPadHoldZL(port) && al::isPadTriggerZR(port)) mIsActive = !mIsActive;
+void Menu::handleInput(sead::BitFlag32 padHold) {
+	sead::BitFlag32 padTrig = ~mPrevHold & padHold.getDirect();
 
-	if (!isActive()) return;
+	if (padHold.isOnBit(sead::Controller::cPadIdx_ZL) && padTrig.isOnBit(sead::Controller::cPadIdx_ZR)) {
+		mIsActive = !mIsActive;
+		mPrevHold = padHold;
+		return;
+	}
 
-	if (al::isPadTriggerUp(port)) navigate({ 0, -1 });
-	if (al::isPadTriggerDown(port)) navigate({ 0, 1 });
-	if (al::isPadTriggerLeft(port)) navigate({ -1, 0 });
-	if (al::isPadTriggerRight(port)) navigate({ 1, 0 });
-	if (al::isPadTriggerZR(port)) activateItem();
+	if (!isActive()) {
+		mPrevHold = padHold;
+		return;
+	}
+
+	if (padTrig.isOnBit(sead::Controller::cPadIdx_Up)) navigate({ 0, -1 });
+	if (padTrig.isOnBit(sead::Controller::cPadIdx_Down)) navigate({ 0, 1 });
+	if (padTrig.isOnBit(sead::Controller::cPadIdx_Left)) navigate({ -1, 0 });
+	if (padTrig.isOnBit(sead::Controller::cPadIdx_Right)) navigate({ 1, 0 });
+	if (padTrig.isOnBit(sead::Controller::cPadIdx_ZR)) activateItem();
+
+	mPrevHold = padHold;
 }
 
 void Menu::navigate(const hk::util::Vector2i& navDir) {

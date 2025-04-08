@@ -45,6 +45,9 @@ HkTrampoline<void, sead::FileDeviceMgr*> fileDeviceMgrHook = hk::hook::trampolin
 
 HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
 	sead::Heap* heap = cly::initializeHeap();
+
+	cly::tas::Pauser* pauser = cly::tas::Pauser::createInstance(heap);
+
 	cly::Menu* menu = cly::Menu::createInstance(heap);
 	menu->init(heap);
 
@@ -60,27 +63,55 @@ HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSys
 	gameSystemInit.orig(gameSystem);
 });
 
-HkTrampoline<void, GameSystem*> drawMainHook = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
-	drawMainHook.orig(gameSystem);
+HkTrampoline<void, GameSystem*> gameSystemDraw = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
+	if (cly::tas::Pauser::instance()->isSequenceActive()) {
+		if (cly::gIsInitialized) cly::Server::log("draw frame");
+		gameSystemDraw.orig(gameSystem);
+	}
 
 	cly::Menu::instance()->draw();
 });
 
-bool isPressedA = false;
+HkTrampoline<void, GameSystem*> gameSystemUpdate = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
+	if (cly::tas::Pauser::instance()->isSequenceActive()) {
+		if (cly::tas::System::isReplaying()) cly::tas::System::getNextFrame();
+		gameSystemUpdate.orig(gameSystem);
+	}
+
+	// cly::tas::Pauser::instance()->update();
+	// cly::Menu::instance()->handleInput(al::getMainControllerPort());
+});
 
 HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::NpadController* controller) -> void {
 	inputHook.orig(controller);
 
 	if (!cly::gIsInitialized) return;
 
+	// cly::Menu::log(
+	// 	"%d %d %d %d %08x %d", controller->mIsConnected ? 1 : 0, controller->mControllerMode, controller->mNpadId, controller->mNpadStyleTag,
+	// 	controller->mPadHold, controller->mSamplingNumber
+	// );
+	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
+		cly::tas::Pauser::instance()->update();
+		cly::Menu::instance()->handleInput(controller->mPadHold);
+	}
+
+	if (cly::Menu::isActive()) {
+		controller->mPadHold.makeAllZero();
+		controller->mLeftStick.set(sead::Vector2f::zero);
+		controller->mRightStick.set(sead::Vector2f::zero);
+	}
+
+	if (!cly::tas::System::isReplaying()) return;
+
 	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
 		// player 1
-		controller->mPadHold.changeBit(sead::Controller::cPadIdx_A, isPressedA);
-		isPressedA = isPressedA ^ 1;
-		// cly::Menu::log(
-		// 	"%d %d %d %d %08x %d", controller->mIsConnected ? 1 : 0, controller->mControllerMode, controller->mNpadId, controller->mNpadStyleTag,
-		// 	controller->mPadHold, controller->mSamplingNumber
-		// );
+		cly::tas::InputFrame inputFrame;
+		cly::tas::System::tryReadCurFrame(&inputFrame);
+		// TODO: map stas button bits to sead button bits
+		controller->mPadHold.setDirect(inputFrame.padHold);
+		controller->mLeftStick.set(inputFrame.leftStick);
+		controller->mRightStick.set(inputFrame.rightStick);
 	} else if (controller->mControllerMode == 1) {
 		// player 2
 	}
@@ -95,7 +126,8 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 extern "C" void hkMain() {
 	hk::gfx::DebugRenderer::instance()->installHooks();
 	gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
-	drawMainHook.installAtSym<"_ZN10GameSystem8drawMainEv">();
+	gameSystemDraw.installAtSym<"_ZN10GameSystem8drawMainEv">();
+	gameSystemUpdate.installAtSym<"_ZN10GameSystem8movementEv">();
 	inputHook.installAtSym<"_ZN2al14NpadController9calcImpl_Ev">();
 	fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
 }

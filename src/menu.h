@@ -6,7 +6,9 @@
 #include <sead/gfx/seadPrimitiveRenderer.h>
 #include <sead/gfx/seadTextWriter.h>
 #include <sead/heap/seadDisposer.h>
+#include <sead/prim/seadBitFlag.h>
 #include <sead/prim/seadSafeString.h>
+
 #include "menuitem.h"
 
 namespace cly {
@@ -29,20 +31,21 @@ private:
 		sead::FixedSafeString<128> text = sead::SafeString::cEmptyString;
 	};
 
-	bool mIsActive = true;
-	sead::Heap* mHeap = nullptr;
-	hk::gfx::DebugRenderer* mRenderer = nullptr;
-
 	const hk::util::Vector2i mScreenResolution = { 1280, 720 };
 	hk::util::Vector2i mCellResolution = { 12, 36 };
 	hk::util::Vector2f mCellDimension = { (f32)mScreenResolution.x / mCellResolution.x, (f32)mScreenResolution.y / mCellResolution.y };
 	f32 mFontHeight = mCellDimension.y;
 	f32 mShadowOffset = 2.0f;
+	bool mIsActive = true;
+
+	sead::Heap* mHeap = nullptr;
+	hk::gfx::DebugRenderer* mRenderer = nullptr;
 
 	sead::PtrArray<MenuItem> mItems;
 	MenuItem* mSelectedItem = nullptr;
-
 	sead::FixedPtrArray<LogEntry, cLogEntryNumMax> mLog;
+
+	sead::BitFlag32 mPrevHold = 0;
 
 	hk::util::Vector2f cellPosToAbsolute(const hk::util::Vector2i& cellPos) { return { cellPos.x * mCellDimension.x, cellPos.y * mCellDimension.y }; }
 
@@ -68,12 +71,12 @@ public:
 	MenuItem* addButton(const hk::util::Vector2i& pos, const sead::SafeString& text, MenuItem::FuncVoid activateFunc);
 
 	void draw();
-	void handleInput(s32 port);
+	void handleInput(sead::BitFlag32 padHold);
 	static void log(const char* fmt, ...);
 	void navigate(const hk::util::Vector2i& navDir);
 	void activateItem();
 
-	bool isActive() const { return mIsActive; }
+	static bool isActive() { return instance()->mIsActive; }
 
 	friend class MenuItem;
 };

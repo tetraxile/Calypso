@@ -5,6 +5,8 @@
 #include <sead/math/seadVector.h>
 #include <sead/prim/seadSafeString.h>
 
+#include "menu.h"
+
 namespace cly::tas {
 
 #pragma pack(push, 4)
@@ -75,7 +77,6 @@ private:
 	u32 mFrameIdx = 0;
 	u32 mNextFrameIdx = 0;
 	bool mIsReplaying = false;
-	InputFrame mPrevFrame;
 	InputFrame mCurFrame;
 
 public:
@@ -87,12 +88,35 @@ public:
 	static void stopReplay();
 	static bool isReplaying();
 	static u32 getFrameCount(); // is this possible to implement with stas format?
-	static bool getNextFrame(InputFrame* out);
+	static void getNextFrame();
+	static bool tryReadCurFrame(InputFrame* out);
 };
 
-void pause();
-void play();
-void togglePause();
-void advanceFrame();
+class Pauser {
+	SEAD_SINGLETON_DISPOSER(Pauser);
+
+private:
+	bool mIsPaused = false;
+	s32 mFrameAdvance = 0;
+
+public:
+	Pauser() = default;
+
+	void pause() { mIsPaused = true; }
+
+	void play() { mIsPaused = false; }
+
+	void togglePause() { mIsPaused ^= 1; }
+
+	void advanceFrame() { mFrameAdvance++; }
+
+	bool isSequenceActive() const { return !mIsPaused || (mFrameAdvance != 0); }
+
+	void update() {
+		if (mFrameAdvance > 0) {
+			mFrameAdvance--;
+		}
+	}
+};
 
 } // namespace cly::tas

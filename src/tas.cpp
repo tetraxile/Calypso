@@ -11,6 +11,7 @@
 namespace cly::tas {
 
 SEAD_SINGLETON_DISPOSER_IMPL(System);
+SEAD_SINGLETON_DISPOSER_IMPL(Pauser);
 
 void System::init(sead::Heap* heap) {
 	mHeap = heap;
@@ -130,11 +131,11 @@ bool System::tryReadCommand(CommandType* cmdType) {
 	return true;
 }
 
-bool System::getNextFrame(InputFrame* out) {
+void System::getNextFrame() {
 	System* self = instance();
 	if (!self->mScriptData || !self->isReplaying()) {
 		Menu::log("ERROR: no script loaded");
-		return false;
+		return;
 	}
 
 	CommandType cmdType = CommandType::INVALID;
@@ -144,18 +145,23 @@ bool System::getNextFrame(InputFrame* out) {
 			// if script ends or errors then stop replaying
 			if (!self->tryReadCommand(&cmdType)) {
 				self->stopReplay();
-				return false;
+				return;
 			}
 		} while (cmdType != CommandType::FRAME);
 	}
 
 	Menu::log("%03d: %016lx %016lx", self->mFrameIdx, self->mCurFrame.padHold);
 
-	*out = { self->mCurFrame };
-
 	self->mFrameIdx++;
+}
 
-	return true;
+bool System::tryReadCurFrame(InputFrame* out) {
+	System* self = instance();
+
+	bool isReplay = self->isReplaying();
+	if (isReplay) *out = self->mCurFrame;
+
+	return isReplay;
 }
 
 void System::startReplay() {
