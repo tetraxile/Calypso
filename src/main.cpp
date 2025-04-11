@@ -91,6 +91,7 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 	// 	"%d %d %d %d %08x %d", controller->mIsConnected ? 1 : 0, controller->mControllerMode, controller->mNpadId, controller->mNpadStyleTag,
 	// 	controller->mPadHold, controller->mSamplingNumber
 	// );
+
 	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
 		cly::tas::Pauser::instance()->update();
 		cly::Menu::instance()->handleInput(controller->mPadHold);
@@ -108,8 +109,7 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 		// player 1
 		cly::tas::InputFrame inputFrame;
 		cly::tas::System::tryReadCurFrame(&inputFrame);
-		// TODO: map stas button bits to sead button bits
-		controller->mPadHold.setDirect(inputFrame.padHold);
+		controller->mPadHold = cly::tas::convertButtonsSTASToSead(inputFrame.padHold);
 		controller->mLeftStick.set(inputFrame.leftStick);
 		controller->mRightStick.set(inputFrame.rightStick);
 	} else if (controller->mControllerMode == 1) {

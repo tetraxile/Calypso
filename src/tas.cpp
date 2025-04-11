@@ -6,6 +6,7 @@
 #include <hk/diag/diag.h>
 
 #include <nn/fs.h>
+#include <sead/controller/seadController.h>
 #include <sead/heap/seadHeap.h>
 
 namespace cly::tas {
@@ -220,12 +221,63 @@ void System::ScriptInfo::clear() {
 	commandCount = 0;
 }
 
-void pause() {}
+sead::BitFlag32 convertButtonsSTASToSead(sead::BitFlag64 stasPad) {
+	sead::BitFlag32 mask = 0;
+	for (s32 i = 0; i < 64; i++) {
+		if (stasPad.isOnBit(i)) {
+			if (i == cSTAS_A)
+				mask.setBit(sead::Controller::cPadIdx_A);
+			else if (i == cSTAS_B)
+				mask.setBit(sead::Controller::cPadIdx_B);
+			else if (i == cSTAS_X)
+				mask.setBit(sead::Controller::cPadIdx_X);
+			else if (i == cSTAS_Y)
+				mask.setBit(sead::Controller::cPadIdx_Y);
+			else if (i == cSTAS_LeftStick)
+				mask.setBit(sead::Controller::cPadIdx_1);
+			else if (i == cSTAS_RightStick)
+				mask.setBit(sead::Controller::cPadIdx_2);
+			else if (i == cSTAS_L)
+				mask.setBit(sead::Controller::cPadIdx_L);
+			else if (i == cSTAS_R)
+				mask.setBit(sead::Controller::cPadIdx_R);
+			else if (i == cSTAS_ZL)
+				mask.setBit(sead::Controller::cPadIdx_ZL);
+			else if (i == cSTAS_ZR)
+				mask.setBit(sead::Controller::cPadIdx_ZR);
+			else if (i == cSTAS_Plus) {
+				mask.setBit(sead::Controller::cPadIdx_Plus);
+				mask.setBit(sead::Controller::cPadIdx_Start);
+			} else if (i == cSTAS_Minus)
+				mask.setBit(sead::Controller::cPadIdx_Minus);
+			else if (i == cSTAS_DLeft)
+				mask.setBit(sead::Controller::cPadIdx_Left);
+			else if (i == cSTAS_DUp)
+				mask.setBit(sead::Controller::cPadIdx_Up);
+			else if (i == cSTAS_DRight)
+				mask.setBit(sead::Controller::cPadIdx_Right);
+			else if (i == cSTAS_DDown)
+				mask.setBit(sead::Controller::cPadIdx_Down);
+			else if (i == cSTAS_LeftStickLeft)
+				mask.setBit(sead::Controller::cPadIdx_LeftStickLeft);
+			else if (i == cSTAS_LeftStickUp)
+				mask.setBit(sead::Controller::cPadIdx_LeftStickUp);
+			else if (i == cSTAS_LeftStickRight)
+				mask.setBit(sead::Controller::cPadIdx_LeftStickRight);
+			else if (i == cSTAS_LeftStickDown)
+				mask.setBit(sead::Controller::cPadIdx_LeftStickDown);
+			else if (i == cSTAS_RightStickLeft)
+				mask.setBit(sead::Controller::cPadIdx_RightStickLeft);
+			else if (i == cSTAS_RightStickUp)
+				mask.setBit(sead::Controller::cPadIdx_RightStickUp);
+			else if (i == cSTAS_RightStickRight)
+				mask.setBit(sead::Controller::cPadIdx_RightStickRight);
+			else if (i == cSTAS_RightStickDown)
+				mask.setBit(sead::Controller::cPadIdx_RightStickDown);
+		}
+	}
 
-void play() {}
-
-void togglePause() {}
-
-void advanceFrame() {}
+	return mask;
+}
 
 } // namespace cly::tas

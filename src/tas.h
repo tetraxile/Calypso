@@ -3,11 +3,39 @@
 #include <nn/fs.h>
 #include <sead/heap/seadDisposer.h>
 #include <sead/math/seadVector.h>
+#include <sead/prim/seadBitFlag.h>
 #include <sead/prim/seadSafeString.h>
 
 #include "menu.h"
 
 namespace cly::tas {
+
+enum Button : s32 {
+	cSTAS_A = 0,
+	cSTAS_B,
+	cSTAS_X,
+	cSTAS_Y,
+	cSTAS_LeftStick,
+	cSTAS_RightStick,
+	cSTAS_L,
+	cSTAS_R,
+	cSTAS_ZL,
+	cSTAS_ZR,
+	cSTAS_Plus,
+	cSTAS_Minus,
+	cSTAS_DLeft,
+	cSTAS_DUp,
+	cSTAS_DRight,
+	cSTAS_DDown,
+	cSTAS_LeftStickLeft,
+	cSTAS_LeftStickUp,
+	cSTAS_LeftStickRight,
+	cSTAS_LeftStickDown,
+	cSTAS_RightStickLeft,
+	cSTAS_RightStickUp,
+	cSTAS_RightStickRight,
+	cSTAS_RightStickDown,
+};
 
 #pragma pack(push, 4)
 
@@ -118,5 +146,7 @@ public:
 		}
 	}
 };
+
+sead::BitFlag32 convertButtonsSTASToSead(sead::BitFlag64 stasPad);
 
 } // namespace cly::tas

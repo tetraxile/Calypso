@@ -40,6 +40,7 @@
   [ ] input display
   [-] frame advance
     [ ] if game is paused, draw frame's texture to framebuffer in order not to have debug menu remnants
+    [ ] BUGFIX: input doesn't play when frame advancing
 
 [ ] savestates (part of script format? or just game save files as part of format?)
   [ ] position, rotation, animation, camera state, 
