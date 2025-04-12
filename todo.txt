@@ -16,13 +16,14 @@
 [-] scripts
   [x] receive script from server
   [x] save script locally
-  [ ] run script
-    [ ] disable user input while script is running (still allow them to control menu)
+  [x] run script
+    [x] disable user input while script is running (still allow them to control menu)
   [ ] pause/stop script midway through
   [ ] camera independent scripts (i.e. freecam during script execution)
   [ ] game-specific commands
     [ ] teleporting
     [ ] modifying HP
+  [x] only read frames when scene is active (hook al::Scene::movement?)
 
 [-] make debug menu
   [x] design

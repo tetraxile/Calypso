@@ -21,6 +21,7 @@
 #include "al/Library/Controller/InputFunction.h"
 #include "al/Library/Controller/NpadController.h"
 #include "al/Library/Memory/HeapUtil.h"
+#include "al/Library/Scene/Scene.h"
 #include "game/System/GameSystem.h"
 
 using namespace hk;
@@ -74,12 +75,16 @@ HkTrampoline<void, GameSystem*> gameSystemDraw = hk::hook::trampoline([](GameSys
 
 HkTrampoline<void, GameSystem*> gameSystemUpdate = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
 	if (cly::tas::Pauser::instance()->isSequenceActive()) {
-		if (cly::tas::System::isReplaying()) cly::tas::System::getNextFrame();
 		gameSystemUpdate.orig(gameSystem);
 	}
 
 	// cly::tas::Pauser::instance()->update();
 	// cly::Menu::instance()->handleInput(al::getMainControllerPort());
+});
+
+HkTrampoline<void, al::Scene*> sceneUpdate = hk::hook::trampoline([](al::Scene* scene) -> void {
+	sceneUpdate.orig(scene);
+	if (cly::tas::System::isReplaying()) cly::tas::System::getNextFrame();
 });
 
 HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::NpadController* controller) -> void {
@@ -88,8 +93,8 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 	if (!cly::gIsInitialized) return;
 
 	// cly::Menu::log(
-	// 	"%d %d %d %d %08x %d", controller->mIsConnected ? 1 : 0, controller->mControllerMode, controller->mNpadId, controller->mNpadStyleTag,
-	// 	controller->mPadHold, controller->mSamplingNumber
+	// 	"%d %d %d %d %08x %d", controller->mIsConnected ? 1 : 0, controller->mControllerMode, controller->mNpadId,
+	// controller->mNpadStyleTag, 	controller->mPadHold, controller->mSamplingNumber
 	// );
 
 	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
@@ -128,6 +133,7 @@ extern "C" void hkMain() {
 	gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
 	gameSystemDraw.installAtSym<"_ZN10GameSystem8drawMainEv">();
 	gameSystemUpdate.installAtSym<"_ZN10GameSystem8movementEv">();
+	sceneUpdate.installAtSym<"_ZN2al5Scene8movementEv">();
 	inputHook.installAtSym<"_ZN2al14NpadController9calcImpl_Ev">();
 	fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
 }
