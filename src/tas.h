@@ -6,8 +6,6 @@
 #include <sead/prim/seadBitFlag.h>
 #include <sead/prim/seadSafeString.h>
 
-#include "menu.h"
-
 namespace cly::tas {
 
 enum Button : s32 {

@@ -66,7 +66,6 @@ HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSys
 
 HkTrampoline<void, GameSystem*> gameSystemDraw = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
 	if (cly::tas::Pauser::instance()->isSequenceActive()) {
-		if (cly::gIsInitialized) cly::Server::log("draw frame");
 		gameSystemDraw.orig(gameSystem);
 	}
 

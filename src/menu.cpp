@@ -5,6 +5,7 @@
 #include "util.h"
 
 #include <hk/diag/diag.h>
+#include <hk/gfx/DebugRenderer.h>
 #include <hk/gfx/Util.h>
 #include <hk/util/Context.h>
 
@@ -23,6 +24,8 @@
 #include "al/Library/Framework/GameFrameworkNx.h"
 #include "al/Library/System/GameSystemInfo.h"
 #include "game/System/Application.h"
+
+using Vector2f = hk::util::Vector2f;
 
 namespace cly {
 
@@ -140,6 +143,9 @@ void Menu::draw() {
 	// draw log entries
 	drawLog();
 
+	// draw input display
+	drawInputDisplay();
+
 	mRenderer->end();
 }
 
@@ -174,13 +180,52 @@ void Menu::drawLog() {
 	}
 }
 
+void Menu::drawInputDisplay() {
+	// const Vector2f startPos = mScreenResolution - Vector2f(340, 400);
+	const Vector2f startPos = { 100.0f, 100.0f };
+	const util::Color4f offCol = { 0.9f, 0.9f, 0.9f, 0.8f };
+	const util::Color4f onCol = { 0.2f, 0.2f, 0.2f, 1.0f };
+
+	// left stick
+	drawCircle16(startPos + Vector2f(50, 85), 30, onCol);
+	drawDisk16(startPos + Vector2f(50, 85), 20, offCol);
+
+	// right stick
+	drawCircle16(startPos + Vector2f(290, 85), 30, onCol);
+	drawDisk16(startPos + Vector2f(290, 85), 20, offCol);
+
+	// d-pad
+	drawDisk16(startPos + Vector2f(110, 85), 10, offCol);
+	drawDisk16(startPos + Vector2f(130, 105), 10, offCol);
+	drawDisk16(startPos + Vector2f(130, 65), 10, offCol);
+	drawDisk16(startPos + Vector2f(150, 85), 10, offCol);
+
+	// abxy
+	drawDisk16(startPos + Vector2f(230, 85), 10, offCol);
+	drawDisk16(startPos + Vector2f(210, 105), 10, offCol);
+	drawDisk16(startPos + Vector2f(210, 65), 10, offCol);
+	drawDisk16(startPos + Vector2f(190, 85), 10, offCol);
+
+	// zl/l
+	drawQuad(startPos + Vector2f(10, 10), { 60, 20 }, offCol, offCol, 10);
+	drawQuad(startPos + Vector2f(85, 10), { 40, 20 }, offCol, offCol, 10);
+
+	// zr/r
+	drawQuad(startPos + Vector2f(270, 10), { 60, 20 }, offCol, offCol, 10);
+	drawQuad(startPos + Vector2f(215, 10), { 40, 20 }, offCol, offCol, 10);
+
+	// plus/minus
+	// drawDisk16(startPos + Vector2f(150, 35), 7, offCol);
+	// drawDisk16(startPos + Vector2f(190, 35), 7, offCol);
+}
+
 /*
  * ================ UTILS ================
  */
 
 void Menu::printAbs(const hk::util::Vector2f pos, const util::Color4f& color, const char* str) {
 	// draw drop shadow first
-	hk::util::Vector2f shadowPos = pos + hk::util::Vector2f(mShadowOffset, mShadowOffset);
+	Vector2f shadowPos = pos + Vector2f(mShadowOffset, mShadowOffset);
 	f32 shadowAlpha = fmax(0.0f, color.a - 0.2f);
 	u32 shadowColor = hk::gfx::rgbaf(0.0f, 0.0f, 0.0f, shadowAlpha);
 	mRenderer->drawString(shadowPos, str, shadowColor);
@@ -190,7 +235,7 @@ void Menu::printAbs(const hk::util::Vector2f pos, const util::Color4f& color, co
 }
 
 void Menu::print(const hk::util::Vector2i& pos, const util::Color4f& color, const char* str) {
-	hk::util::Vector2f printPos = cellPosToAbsolute(pos);
+	Vector2f printPos = cellPosToAbsolute(pos);
 	printAbs(printPos, color, str);
 }
 
@@ -253,21 +298,29 @@ void Menu::activateItem() {
 	if (mSelectedItem && mSelectedItem->mActivateFunc) mSelectedItem->mActivateFunc();
 }
 
-void Menu::drawQuad(const hk::util::Vector2f& tl, const hk::util::Vector2f& size, const util::Color4f& color0, const util::Color4f& color1) {
+void Menu::drawQuad(const hk::util::Vector2f& tl, const hk::util::Vector2f& size, const util::Color4f& color0, const util::Color4f& color1, f32 radius = 0.0f) {
 	mRenderer->drawQuad(
 		{ { tl.x, tl.y }, { 0, 0 }, color0 }, { { tl.x + size.x, tl.y }, { 1.0, 0 }, color0 }, { { tl.x + size.x, tl.y + size.y }, { 1.0, 1.0 }, color1 },
-		{ { tl.x, tl.y + size.y }, { 0, 1.0 }, color1 }
+		{ { tl.x, tl.y + size.y }, { 0, 1.0 }, color1 }, radius
 	);
 }
 
 void Menu::drawCellBackground(const hk::util::Vector2i& pos, const util::Color4f& color, const hk::util::Vector2i& span) {
-	hk::util::Vector2f size = mCellDimension * span - hk::util::Vector2f(1.0f, 1.0f);
+	Vector2f size = mCellDimension * span - Vector2f(1.0f, 1.0f);
 	util::Color4f brightColor;
 	brightColor.r = fmin(1.0f, color.r * 1.4f);
 	brightColor.g = fmin(1.0f, color.g * 1.4f);
 	brightColor.b = fmin(1.0f, color.b * 1.4f);
 	brightColor.a = color.a;
 	drawQuad(cellPosToAbsolute(pos), size, brightColor, color);
+}
+
+void Menu::drawCircle16(hk::util::Vector2f center, f32 radius, util::Color4f color, f32 width) {
+	mRenderer->drawCircle({ center, { 0.0f, 0.0f }, color }, radius, width);
+}
+
+void Menu::drawDisk16(hk::util::Vector2f center, f32 radius, util::Color4f color) {
+	mRenderer->drawDisk({ center, { 0.0f, 0.0f }, color }, radius);
 }
 
 } // namespace cly
