@@ -187,12 +187,16 @@ void Menu::drawInputDisplay() {
 	const util::Color4f onCol = { 0.2f, 0.2f, 0.2f, 1.0f };
 
 	// left stick
+	sead::Vector2f leftStickPos = al::getLeftStick();
+	Vector2f leftStickOffset = Vector2f(leftStickPos.x, leftStickPos.y) * 20.0f;
 	drawCircle16(startPos + Vector2f(50, 85), 30, onCol);
-	drawDisk16(startPos + Vector2f(50, 85), 20, al::isPadHoldLeftStick() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(50, 85) + leftStickOffset, 20, al::isPadHoldLeftStick() ? onCol : offCol);
 
 	// right stick
+	sead::Vector2f rightStickPos = al::getRightStick();
+	Vector2f rightStickOffset = Vector2f(rightStickPos.x, rightStickPos.y) * 20.0f;
 	drawCircle16(startPos + Vector2f(290, 85), 30, onCol);
-	drawDisk16(startPos + Vector2f(290, 85), 20, al::isPadHoldRightStick() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(290, 85) + rightStickOffset, 20, al::isPadHoldRightStick() ? onCol : offCol);
 
 	// d-pad
 	drawDisk16(startPos + Vector2f(110, 85), 10, al::isPadHoldLeft() ? onCol : offCol);

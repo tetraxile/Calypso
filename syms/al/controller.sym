@@ -26,6 +26,9 @@ _ZN2al10isPadHoldREi
 _ZN2al13isPadHoldPlusEi
 _ZN2al14isPadHoldMinusEi
 
+_ZN2al12getLeftStickEi
+_ZN2al13getRightStickEi
+
 _ZN2al23getPlayerControllerPortEi
 _ZN2al21getMainControllerPortEv
 
