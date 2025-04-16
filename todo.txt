@@ -38,7 +38,7 @@
   [ ] toasts/notifications?
   [ ] other visualizers? e.g. hitsensors
   [ ] add more user feedback (e.g. "Loading...", etc.)
-  [ ] input display
+  [x] input display
   [-] frame advance
     [ ] if game is paused, draw frame's texture to framebuffer in order not to have debug menu remnants
     [ ] BUGFIX: input doesn't play when frame advancing
