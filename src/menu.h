@@ -57,7 +57,8 @@ private:
 
 	void drawLog();
 	void drawInputDisplay();
-	void drawQuad(const hk::util::Vector2f& pos, const hk::util::Vector2f& size, const util::Color4f& color0, const util::Color4f& color1, f32 radius);
+	void drawQuad(const hk::util::Vector2f& pos, const hk::util::Vector2f& size, const util::Color4f& color0, const util::Color4f& color1, f32 radius = 0.0f);
+	void drawQuad(const hk::util::Vector2f& pos, const hk::util::Vector2f& size, const util::Color4f& color, f32 radius = 0.0f);
 	void drawCellBackground(const hk::util::Vector2i& pos, const util::Color4f& color, const hk::util::Vector2i& span);
 	void drawCircle16(hk::util::Vector2f center, f32 radius, util::Color4f color, f32 width = 1.0f);
 	void drawDisk16(hk::util::Vector2f center, f32 radius, util::Color4f color);

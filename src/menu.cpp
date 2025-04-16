@@ -181,42 +181,42 @@ void Menu::drawLog() {
 }
 
 void Menu::drawInputDisplay() {
-	// const Vector2f startPos = mScreenResolution - Vector2f(340, 400);
-	const Vector2f startPos = { 100.0f, 100.0f };
+	const Vector2f startPos = mScreenResolution - Vector2f(340, 400);
+	// const Vector2f startPos = { 100.0f, 100.0f };
 	const util::Color4f offCol = { 0.9f, 0.9f, 0.9f, 0.8f };
 	const util::Color4f onCol = { 0.2f, 0.2f, 0.2f, 1.0f };
 
 	// left stick
 	drawCircle16(startPos + Vector2f(50, 85), 30, onCol);
-	drawDisk16(startPos + Vector2f(50, 85), 20, offCol);
+	drawDisk16(startPos + Vector2f(50, 85), 20, al::isPadHoldLeftStick() ? onCol : offCol);
 
 	// right stick
 	drawCircle16(startPos + Vector2f(290, 85), 30, onCol);
-	drawDisk16(startPos + Vector2f(290, 85), 20, offCol);
+	drawDisk16(startPos + Vector2f(290, 85), 20, al::isPadHoldRightStick() ? onCol : offCol);
 
 	// d-pad
-	drawDisk16(startPos + Vector2f(110, 85), 10, offCol);
-	drawDisk16(startPos + Vector2f(130, 105), 10, offCol);
-	drawDisk16(startPos + Vector2f(130, 65), 10, offCol);
-	drawDisk16(startPos + Vector2f(150, 85), 10, offCol);
+	drawDisk16(startPos + Vector2f(110, 85), 10, al::isPadHoldLeft() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(130, 105), 10, al::isPadHoldDown() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(130, 65), 10, al::isPadHoldUp() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(150, 85), 10, al::isPadHoldRight() ? onCol : offCol);
 
 	// abxy
-	drawDisk16(startPos + Vector2f(230, 85), 10, offCol);
-	drawDisk16(startPos + Vector2f(210, 105), 10, offCol);
-	drawDisk16(startPos + Vector2f(210, 65), 10, offCol);
-	drawDisk16(startPos + Vector2f(190, 85), 10, offCol);
+	drawDisk16(startPos + Vector2f(230, 85), 10, al::isPadHoldA() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(210, 105), 10, al::isPadHoldB() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(210, 65), 10, al::isPadHoldX() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(190, 85), 10, al::isPadHoldY() ? onCol : offCol);
 
 	// zl/l
-	drawQuad(startPos + Vector2f(10, 10), { 60, 20 }, offCol, offCol, 10);
-	drawQuad(startPos + Vector2f(85, 10), { 40, 20 }, offCol, offCol, 10);
+	drawQuad(startPos + Vector2f(10, 10), { 60, 20 }, al::isPadHoldZL() ? onCol : offCol, 10);
+	drawQuad(startPos + Vector2f(85, 10), { 40, 20 }, al::isPadHoldL() ? onCol : offCol, 10);
 
 	// zr/r
-	drawQuad(startPos + Vector2f(270, 10), { 60, 20 }, offCol, offCol, 10);
-	drawQuad(startPos + Vector2f(215, 10), { 40, 20 }, offCol, offCol, 10);
+	drawQuad(startPos + Vector2f(270, 10), { 60, 20 }, al::isPadHoldZR() ? onCol : offCol, 10);
+	drawQuad(startPos + Vector2f(215, 10), { 40, 20 }, al::isPadHoldR() ? onCol : offCol, 10);
 
 	// plus/minus
-	// drawDisk16(startPos + Vector2f(150, 35), 7, offCol);
-	// drawDisk16(startPos + Vector2f(190, 35), 7, offCol);
+	drawDisk16(startPos + Vector2f(150, 35), 7, al::isPadHoldPlus() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(190, 35), 7, al::isPadHoldMinus() ? onCol : offCol);
 }
 
 /*
@@ -298,11 +298,15 @@ void Menu::activateItem() {
 	if (mSelectedItem && mSelectedItem->mActivateFunc) mSelectedItem->mActivateFunc();
 }
 
-void Menu::drawQuad(const hk::util::Vector2f& tl, const hk::util::Vector2f& size, const util::Color4f& color0, const util::Color4f& color1, f32 radius = 0.0f) {
+void Menu::drawQuad(const hk::util::Vector2f& tl, const hk::util::Vector2f& size, const util::Color4f& color0, const util::Color4f& color1, f32 radius) {
 	mRenderer->drawQuad(
 		{ { tl.x, tl.y }, { 0, 0 }, color0 }, { { tl.x + size.x, tl.y }, { 1.0, 0 }, color0 }, { { tl.x + size.x, tl.y + size.y }, { 1.0, 1.0 }, color1 },
 		{ { tl.x, tl.y + size.y }, { 0, 1.0 }, color1 }, radius
 	);
+}
+
+void Menu::drawQuad(const hk::util::Vector2f& tl, const hk::util::Vector2f& size, const util::Color4f& color, f32 radius) {
+	drawQuad(tl, size, color, color, radius);
 }
 
 void Menu::drawCellBackground(const hk::util::Vector2i& pos, const util::Color4f& color, const hk::util::Vector2i& span) {
