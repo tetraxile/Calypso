@@ -92,14 +92,14 @@ def create_std_dir():
 
 def build_client(job_count: int):
     run_command([ "cmake", "-B", str(CLIENT_BUILD_DIR), "-S", str(CLIENT_DIR) ])
-    run_command([ "cmake", "--build", str(CLIENT_BUILD_DIR) ])
+    run_command([ "cmake", "--build", str(CLIENT_BUILD_DIR), "--", "-j", str(job_count) ])
 
     copy_dir(CLIENT_BUILD_DIR / "sd", OUTPUT_DIR / "sd")
 
 
 def build_server(job_count: int):
     run_command([ "cmake", "-B", str(SERVER_BUILD_DIR), "-S", str(SERVER_DIR) ])
-    run_command([ "cmake", "--build", str(SERVER_BUILD_DIR) ])
+    run_command([ "cmake", "--build", str(SERVER_BUILD_DIR), "--", "-j", str(job_count) ])
 
     copy_file(SERVER_BUILD_DIR / "CalypsoServer", OUTPUT_DIR / "CalypsoServer")
 

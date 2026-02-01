@@ -6,25 +6,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(config/config.cmake)
 
-file(GLOB_RECURSE SOURCES_ASM ${PROJECT_SOURCE_DIR}/src/*.S)
-file(GLOB_RECURSE SOURCES_C ${PROJECT_SOURCE_DIR}/src/*.c)
-file(GLOB_RECURSE SOURCES_CXX ${PROJECT_SOURCE_DIR}/src/*.cpp)
-set(SOURCES ${SOURCES_ASM} ${SOURCES_C} ${SOURCES_CXX})
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME})
 
-include_directories(lib/custom/sead)
-include_directories(lib/custom)
-
-include_directories(lib/smo)
-include_directories(lib/smo/aarch64)
-include_directories(lib/smo/agl)
-include_directories(lib/smo/al)
-include_directories(lib/smo/eui)
-include_directories(lib/smo/game)
-include_directories(lib/smo/NintendoSDK)
-include_directories(lib/smo/sead)
-
-include_directories(src)
+add_subdirectory(src)
 
 include(sys/cmake/module.cmake)
 include(sys/cmake/deploy.cmake)
