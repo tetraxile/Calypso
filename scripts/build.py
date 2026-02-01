@@ -13,6 +13,7 @@ CLIENT_BUILD_DIR = CLIENT_DIR / "build"
 SERVER_DIR       = ROOT_DIR   / "server"
 SERVER_BUILD_DIR = SERVER_DIR / "build"
 OUTPUT_DIR       = ROOT_DIR   / "build"
+STD_DIR          = CLIENT_DIR / "lib" / "std"
 
 
 # ~~~~~ UTILS ~~~~~
@@ -55,7 +56,7 @@ def copy_dir(src: Path, dst: Path):
     assert isinstance(dst, Path)
 
     print(f"cp -r {src} {dst}")
-    shutil.copytree(src, dst)
+    shutil.copytree(src, dst, dirs_exist_ok=True)
 
 
 def copy_file(src: Path, dst: Path):
@@ -66,13 +67,27 @@ def copy_file(src: Path, dst: Path):
     shutil.copy(src, dst)
 
 
+def create_dir(path: Path):
+    assert isinstance(path, Path)
+
+    if not path.is_dir:
+        print(f"mkdir {path}")
+        os.mkdir(path)
+    
+def change_dir(path: Path):
+    assert isinstance(path, Path)
+
+    print(f"cd {path}")
+    os.chdir(CLIENT_DIR)
+
+
 
 # ~~~~~ BUILD STEPS ~~~~~
 
-def create_output_dir():
-    if not OUTPUT_DIR.is_dir:
-        print(f"mkdir {OUTPUT_DIR}")
-        os.mkdir(OUTPUT_DIR)
+
+def create_std_dir():
+    change_dir(CLIENT_DIR)
+    run_command([ "sys/tools/setup_libcxx_prepackaged.py" ])
 
 
 def build_client(job_count: int):
@@ -110,7 +125,9 @@ def main():
             remove_dir(SERVER_BUILD_DIR)
             remove_file(OUTPUT_DIR / "CalypsoServer")
     else:
-        create_output_dir()
+        create_dir(OUTPUT_DIR)
+        if not STD_DIR.is_dir():
+            create_std_dir()
 
         if "client" in targets:
             build_client(args.jobs)
