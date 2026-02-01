@@ -1,6 +1,10 @@
 build/
 .cache/
 compile_commands.json
-lib/std
 .vscode/
 tmp/
+
+
+client/lib/std
+client/build
+client/.cache

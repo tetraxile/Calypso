@@ -1,6 +1,6 @@
 [submodule "sys"]
-	path = sys
+	path = client/sys
 	url = https://github.com/fruityloops1/LibHakkun
 [submodule "lib/smo"]
-	path = lib/smo
+	path = client/lib/smo
 	url = https://github.com/MonsterDruide1/OdysseyHeaders
