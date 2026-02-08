@@ -18,9 +18,14 @@ STD_DIR          = CLIENT_DIR / "lib" / "std"
 
 # ~~~~~ UTILS ~~~~~
 
-def run_command(args: list[str]):
+def run_command(args: list[str]) -> int:
     print(" ".join(args))
-    subprocess.run(args)
+
+    try:
+        subprocess.run(args, check=True)
+        return 0
+    except subprocess.CalledProcessError:
+        return 1
 
 
 def remove_dir(path: Path):
@@ -85,23 +90,25 @@ def change_dir(path: Path):
 # ~~~~~ BUILD STEPS ~~~~~
 
 
-def create_std_dir():
+def create_std_dir() -> int:
     change_dir(CLIENT_DIR)
-    run_command([ "sys/tools/setup_libcxx_prepackaged.py" ])
+    return run_command([ "sys/tools/setup_libcxx_prepackaged.py" ])
 
 
-def build_client(job_count: int):
-    run_command([ "cmake", "-B", str(CLIENT_BUILD_DIR), "-S", str(CLIENT_DIR) ])
-    run_command([ "cmake", "--build", str(CLIENT_BUILD_DIR), "--", "-j", str(job_count) ])
+def build_client(job_count: int) -> int:
+    if (r := run_command([ "cmake", "-B", str(CLIENT_BUILD_DIR), "-S", str(CLIENT_DIR) ])): return r
+    if (r := run_command([ "cmake", "--build", str(CLIENT_BUILD_DIR), "--", "-j", str(job_count) ])): return r
 
     copy_dir(CLIENT_BUILD_DIR / "sd", OUTPUT_DIR / "sd")
+    return 0
 
 
-def build_server(job_count: int):
-    run_command([ "cmake", "-B", str(SERVER_BUILD_DIR), "-S", str(SERVER_DIR) ])
-    run_command([ "cmake", "--build", str(SERVER_BUILD_DIR), "--", "-j", str(job_count) ])
+def build_server(job_count: int) -> int:
+    if (r := run_command([ "cmake", "-B", str(SERVER_BUILD_DIR), "-S", str(SERVER_DIR) ])): return r
+    if (r := run_command([ "cmake", "--build", str(SERVER_BUILD_DIR), "--", "-j", str(job_count) ])): return r
 
     copy_file(SERVER_BUILD_DIR / "CalypsoServer", OUTPUT_DIR / "CalypsoServer")
+    return 0
 
 
 def main():
@@ -127,13 +134,13 @@ def main():
     else:
         create_dir(OUTPUT_DIR)
         if not STD_DIR.is_dir():
-            create_std_dir()
+            if (r := create_std_dir()): return r
 
         if "client" in targets:
-            build_client(args.jobs)
+            if (r := build_client(args.jobs)): return r
         if "server" in targets:
-            build_server(args.jobs)
+            if (r := build_server(args.jobs)): return r
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
