@@ -19,7 +19,6 @@ target_include_directories(${PROJECT_NAME}
         ../include/al
         ../include/eui
         ../include/game
-        ../include/nn
         ../include/sead
 
         .
