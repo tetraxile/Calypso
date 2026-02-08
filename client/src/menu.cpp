@@ -142,7 +142,7 @@ void Menu::draw() {
 	}
 
 	// draw log entries
-	// drawLog();
+	drawLog();
 
 	// draw input display
 	drawInputDisplay();

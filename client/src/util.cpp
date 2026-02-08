@@ -7,16 +7,17 @@
 
 namespace cly::util {
 
-void createFile(const sead::SafeString& filePath, s64 size, bool overwrite) {
+hk::Result createFile(const sead::SafeString& filePath, s64 size, bool overwrite) {
 	if (isFileExist(filePath)) {
 		if (overwrite) {
 			LOG_R(nn::fs::DeleteFile(filePath.cstr()));
 		} else {
-			return;
+			return hk::ResultSuccess();
 		}
 	}
 
 	LOG_R(nn::fs::CreateFile(filePath.cstr(), size));
+	return hk::ResultSuccess();
 }
 
 bool isFileExist(const sead::SafeString& filePath) {

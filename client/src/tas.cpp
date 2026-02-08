@@ -103,10 +103,13 @@ bool System::tryReadCommand(CommandType* cmdType) {
 	CommandType type = read<CommandType>();
 	u16 size = read<u16>();
 
-	if (type == CommandType::FRAME) {
+	switch (type) {
+	case CommandType::FRAME: {
 		Menu::log("command: FRAME");
 		mNextFrameIdx = read<u32>();
-	} else if (type == CommandType::CONTROLLER) {
+		break;
+	}
+	case CommandType::CONTROLLER: {
 		Menu::log("command: CONTROLLER");
 
 		u8 playerID = read<u8>();
@@ -120,10 +123,16 @@ bool System::tryReadCommand(CommandType* cmdType) {
 		mCurFrame.padHold = buttons;
 		mCurFrame.leftStick = { (f32)leftStickX, (f32)leftStickY };
 		mCurFrame.rightStick = { (f32)rightStickX, (f32)rightStickY };
-	} else {
+		break;
+	}
+	case CommandType::MOTION:
+	case CommandType::AMIIBO:
+	case CommandType::TOUCH:
+	case CommandType::INVALID: {
 		Menu::log("ERROR: unsupported command type %d", type);
 		mCursor -= 4;
 		return false;
+	}
 	}
 
 	*cmdType = type;

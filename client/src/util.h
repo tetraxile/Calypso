@@ -16,7 +16,7 @@
 		nn::Result _result = RESULT;                                                                                                                           \
 		if (_result.IsFailure()) {                                                                                                                             \
 			cly::Menu::log("ERROR: %s:%s (%04d-%04d)", __FILE__, __LINE__, _result.GetModule() + 2000, _result.GetDescription());                              \
-			return;                                                                                                                                            \
+			return _result.GetInnerValueForDebug();                                                                                                                                            \
 		}                                                                                                                                                      \
 	} while (0)
 
@@ -30,7 +30,7 @@ struct Color4f {
 	operator u32() const { return toU32(); }
 };
 
-void createFile(const sead::SafeString& filePath, s64 size, bool overwrite = false);
+hk::Result createFile(const sead::SafeString& filePath, s64 size, bool overwrite = false);
 bool isFileExist(const sead::SafeString& filePath);
 
 inline u32 roundUp(u32 x, u32 power_of_2) {
