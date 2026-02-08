@@ -4,6 +4,8 @@
 
 #include "al/Library/Thread/AsyncFunctorThread.h"
 
+#include <hk/types.h>
+
 namespace cly {
 
 class Server {
@@ -31,7 +33,7 @@ private:
 	PacketType mCurPacketType = PacketType::None;
 
 	void threadRecv();
-	void handlePacket();
+	hk::Result handlePacket();
 	s32 recvAll(u8* recvBuf, s32 remaining);
 
 public:
@@ -39,6 +41,7 @@ public:
 
 	void init(sead::Heap* heap);
 	s32 connect(const char* serverIP, u16 port);
+	void disconnect();
 
 	static void log(const char* fmt, ...);
 };

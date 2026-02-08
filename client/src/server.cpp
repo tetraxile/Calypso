@@ -35,9 +35,6 @@ void Server::init(sead::Heap* heap) {
 	mHeap = heap;
 	sead::ScopedCurrentHeapSetter heapSetter(mHeap);
 
-	al::FunctorV0M functor(this, &Server::threadRecv);
-	mRecvThread = new al::AsyncFunctorThread("Recv Thread", functor, 0, 0x20000, {});
-
 	nn::socket::Initialize(socketPool, socketPoolSize, socketAllocPoolSize, 0xE);
 
 	disableSocketInit.installAtSym<"_ZN2nn6socket10InitializeEPvmmi">();
@@ -58,14 +55,17 @@ s32 Server::recvAll(u8* recvBuf, s32 remaining) {
 
 void Server::threadRecv() {
 	while (true) {
-		handlePacket();
+		hk::Result r = handlePacket();
+		if (r.failed())
+			disconnect();
 		nn::os::SleepThread(nn::TimeSpan::FromSeconds(1));
 	}
 }
 
-void Server::handlePacket() {
+hk::Result Server::handlePacket() {
 	u8 header[cPacketHeaderSize];
-	recvAll(header, cPacketHeaderSize);
+	if (recvAll(header, cPacketHeaderSize) <= 0)
+		return hk::ResultFailed();
 	PacketType packetType = PacketType(header[0]);
 
 	switch (packetType) {
@@ -74,7 +74,8 @@ void Server::handlePacket() {
 		u32 scriptLen = sead::Endian::swapU32(*(u32*)&header[4]);
 
 		char scriptName[0x101];
-		recvAll((u8*)scriptName, 0xff);
+		if (recvAll((u8*)scriptName, 0xff) <= 0)
+			return hk::ResultFailed();
 		scriptName[0x100] = '\0';
 
 		log("received packet Script: name = %s, len = %d (%d)", scriptName, scriptLen);
@@ -93,6 +94,8 @@ void Server::handlePacket() {
 		while (totalWritten < scriptLen) {
 			s32 remaining = scriptLen - totalWritten;
 			s32 chunkLen = recvAll(chunkBuf, sead::Mathf::min(remaining, sizeof(chunkBuf)));
+			if (chunkLen <= 0)
+				return hk::ResultFailed();
 			LOG_R(nn::fs::WriteFile(fileHandle, totalWritten, chunkBuf, chunkLen, nn::fs::WriteOption::CreateOption(nn::fs::WriteOptionFlag_Flush)));
 			totalWritten += chunkLen;
 		}
@@ -106,8 +109,10 @@ void Server::handlePacket() {
 		break;
 	}
 	case PacketType::None:
-	default: break;
+		break;
 	}
+
+	return hk::ResultSuccess();
 }
 
 s32 Server::connect(const char* serverIP, u16 port) {
@@ -144,7 +149,12 @@ s32 Server::connect(const char* serverIP, u16 port) {
 	s32 r = nn::socket::Send(mSockFd, message, strlen(message), 0);
 	if (r < 0) return nn::socket::GetLastErrno();
 
-	mRecvThread->start();
+	{
+		sead::ScopedCurrentHeapSetter heapSetter(mHeap);
+		al::FunctorV0M functor(this, &Server::threadRecv);
+		mRecvThread = new (mHeap) al::AsyncFunctorThread("Recv Thread", functor, 0, 0x20000, {});
+		mRecvThread->start();
+	}
 
 	return 0;
 }
@@ -162,6 +172,12 @@ void Server::log(const char* fmt, ...) {
 	s32 r = nn::socket::Send(server->mSockFd, message, strlen(message), 0);
 
 	va_end(args);
+}
+
+void Server::disconnect() {
+	cly::Menu::log("disconnected from server");
+	mState = State::DISCONNECTED;
+	delete mRecvThread;
 }
 
 } // namespace cly
