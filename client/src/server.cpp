@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 
 #include <nn/fs.h>
 #include <nn/fs/fs_files.h>
@@ -117,6 +118,12 @@ s32 Server::connect(const char* serverIP, u16 port) {
 
 	// create socket
 	if ((mSockFd = nn::socket::Socket(AF_INET, SOCK_STREAM, 0)) < 0) return nn::socket::GetLastErrno();
+
+	// disable Nagle's algorithm (which would delay sending packets to group smaller ones together)
+	{
+		const s32 i = 1;
+		nn::socket::SetSockOpt(mSockFd, IPPROTO_TCP, TCP_NODELAY, &i, sizeof(i));
+	}
 
 	// configure server to connect to
 	nn::socket::InetAton(serverIP, &hostAddress);
