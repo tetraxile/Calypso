@@ -35,7 +35,15 @@ public:
 	void virtual draw() const;
 	void draw_(const util::Color4f& fgColor, const util::Color4f& bgColor) const;
 
-	void setText(const sead::FixedSafeString<128>& text) { mText = text; }
+	MenuItem* setText(const sead::FixedSafeString<128>& text) {
+		mText = text;
+		return this;
+	}
+
+	MenuItem* setSpan(const hk::util::Vector2i& span) {
+		mSpan = span;
+		return this;
+	}
 
 	friend class Menu;
 };

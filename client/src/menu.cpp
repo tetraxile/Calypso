@@ -47,19 +47,20 @@ void Menu::init(sead::Heap* heap) {
 		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
 	};
 
-	MenuItem* itemConnect = addButton({ 0, 19 }, "connect", []() -> void {
-		cly::Server* server = cly::Server::instance();
-		s32 r = server->connect("192.168.1.215", 8171);
-		if (r != 0) cly::Menu::log("Connection error: %s\n", strerror(r));
-	});
-	itemConnect->mSpan = { 2, 1 };
-	select(itemConnect);
+	// MenuItem* itemPause = addButton({ 0, 21 }, "toggle pause", []() -> void { tas::Pauser::instance()->togglePause(); })->setSpan({ 2, 1 });
+	// addButton({ 0, 22 }, "advance frame", []() -> void { tas::Pauser::instance()->advanceFrame(); })->setSpan({ 2, 1 });
 
-	addButton({ 0, 21 }, "load script", []() -> void { tas::System::loadScript("jump.stas"); })->mSpan = { 2, 1 };
+	MenuItem* itemConnect = addButton({ 0, 24 }, "connect", []() -> void {
+								cly::Server* server = cly::Server::instance();
+								s32 r = server->connect("192.168.2.62", 8171);
+								if (r != 0) cly::Menu::log("Connection error: %s\n", strerror(r));
+							})->setSpan({ 2, 1 });
+
+	// addButton({ 0, 25 }, "script: select...", []() -> void { tas::System::loadScript("cap_kfr.stas"); })->setSpan({ 2, 1 });
 	// TODO: grey button out if script not loaded
-	addButton({ 0, 22 }, "start replay", []() -> void { tas::System::startReplay(); })->mSpan = { 2, 1 };
-	addButton({ 0, 23 }, "toggle pause", []() -> void { tas::Pauser::instance()->togglePause(); })->mSpan = { 2, 1 };
-	addButton({ 0, 24 }, "advance frame", []() -> void { tas::Pauser::instance()->advanceFrame(); })->mSpan = { 2, 1 };
+	// addButton({ 0, 26 }, "start replay", []() -> void { tas::System::startReplay(); })->setSpan({ 2, 1 });
+
+	select(itemConnect);
 }
 
 void Menu::handleInput(sead::BitFlag32 padHold) {
@@ -141,7 +142,7 @@ void Menu::draw() {
 	}
 
 	// draw log entries
-	drawLog();
+	// drawLog();
 
 	// draw input display
 	drawInputDisplay();
