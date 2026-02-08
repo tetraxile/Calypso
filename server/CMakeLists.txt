@@ -3,7 +3,7 @@ project(CalypsoServer)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Network)
 qt_standard_project_setup(REQUIRES 6.5)
 
 qt_add_executable(${PROJECT_NAME}
@@ -16,4 +16,5 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Qt6::Core
         Qt6::Widgets
+        Qt6::Network
 )
