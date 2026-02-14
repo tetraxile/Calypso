@@ -100,6 +100,7 @@ def build_client(job_count: int) -> int:
     if (r := run_command([ "cmake", "--build", str(CLIENT_BUILD_DIR), "--", "-j", str(job_count) ])): return r
 
     copy_dir(CLIENT_BUILD_DIR / "sd", OUTPUT_DIR / "sd")
+    copy_file(CLIENT_BUILD_DIR / "Calypso.nss", OUTPUT_DIR / "Calypso.nss")
     return 0
 
 
