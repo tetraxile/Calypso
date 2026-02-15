@@ -17,31 +17,30 @@
 
 #include "util.h"
 
-
 void MainWindow::newConnection() {
-    mClientSocket = mServer->nextPendingConnection();
-    
-    {
-        bool isV4 = false;
-        QHostAddress addrIPv6 = mClientSocket->peerAddress();
-        QHostAddress addrIPv4 = QHostAddress(addrIPv6.toIPv4Address(&isV4));
-        QString addrStr = isV4 ? addrIPv4.toString() : addrIPv6.toString();
-        quint16 port = mClientSocket->peerPort();
-        log("connection received from %s:%d", qPrintable(addrStr), port);
-    }
+	mClientSocket = mServer->nextPendingConnection();
 
-    connect(mClientSocket, &QTcpSocket::disconnected, mClientSocket, &QTcpSocket::deleteLater);
-    connect(mClientSocket, &QTcpSocket::disconnected, this, &MainWindow::disconnected);
-    connect(mClientSocket, &QTcpSocket::readyRead, this, &MainWindow::readClient);
+	{
+		bool isV4 = false;
+		QHostAddress addrIPv6 = mClientSocket->peerAddress();
+		QHostAddress addrIPv4 = QHostAddress(addrIPv6.toIPv4Address(&isV4));
+		QString addrStr = isV4 ? addrIPv4.toString() : addrIPv6.toString();
+		quint16 port = mClientSocket->peerPort();
+		log("connection received from %s:%d", qPrintable(addrStr), port);
+	}
+
+	connect(mClientSocket, &QTcpSocket::disconnected, mClientSocket, &QTcpSocket::deleteLater);
+	connect(mClientSocket, &QTcpSocket::disconnected, this, &MainWindow::disconnected);
+	connect(mClientSocket, &QTcpSocket::readyRead, this, &MainWindow::readClient);
 }
 
 void MainWindow::disconnected() {
-    log("client disconnected");
+	log("client disconnected");
 }
 
 void MainWindow::readClient() {
-    QTextStream in(mClientSocket);
-    log("[switch] %s", qPrintable(in.readAll()));
+	QTextStream in(mClientSocket);
+	log("[switch] %s", qPrintable(in.readAll()));
 }
 
 void MainWindow::openFileButton() {
@@ -57,7 +56,7 @@ void MainWindow::openFileButton() {
 	log("opening file: %s", qPrintable(fileName));
 	if (mScript) delete mScript;
 	mScript = new ScriptSTAS(file);
-	
+
 	mRecentScripts->insertItem(0, fileName);
 	mRecentScripts->setCurrentIndex(0);
 }
@@ -77,12 +76,12 @@ void MainWindow::openFileRecent() {
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
-    setupUi();
+	setupUi();
 
-    mServer = new QTcpServer(this);
-    mServer->listen(QHostAddress::Any, 8171);
-    log("listening for connection on port %d...", 8171);
-    connect(mServer, &QTcpServer::newConnection, this, &MainWindow::newConnection);
+	mServer = new QTcpServer(this);
+	mServer->listen(QHostAddress::Any, 8171);
+	log("listening for connection on port %d...", 8171);
+	connect(mServer, &QTcpServer::newConnection, this, &MainWindow::newConnection);
 }
 
 MainWindow::~MainWindow() {
@@ -90,46 +89,45 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::setupUi() {
-    if (objectName().isEmpty())
-        setObjectName("MainWindow");
-    resize(1280, 720);
+	if (objectName().isEmpty()) setObjectName("MainWindow");
+	resize(1280, 720);
 
-    QWidget* centralWidget = new QWidget(this);
-    setCentralWidget(centralWidget);
+	QWidget* centralWidget = new QWidget(this);
+	setCentralWidget(centralWidget);
 
-    QVBoxLayout* vboxLayout = new QVBoxLayout(centralWidget);
-    mTopRow    = new QHBoxLayout;
-    mBottomRow = new QHBoxLayout;
-    vboxLayout->addLayout(mTopRow);
-    vboxLayout->addLayout(mBottomRow);
+	QVBoxLayout* vboxLayout = new QVBoxLayout(centralWidget);
+	mTopRow = new QHBoxLayout;
+	mBottomRow = new QHBoxLayout;
+	vboxLayout->addLayout(mTopRow);
+	vboxLayout->addLayout(mBottomRow);
 
-    setupControls();
+	setupControls();
 	setupSavestates();
 	setupLog();
 	setupInputDisplay();
 	setupGameInfo();
 
-    mMenuBar = new QMenuBar(this);
-    setMenuBar(mMenuBar);
-    QMenu* menuMeow = new QMenu(mMenuBar);
-    mMenuBar->addAction(menuMeow->menuAction());
+	mMenuBar = new QMenuBar(this);
+	setMenuBar(mMenuBar);
+	QMenu* menuMeow = new QMenu(mMenuBar);
+	mMenuBar->addAction(menuMeow->menuAction());
 
-    mStatusBar = new QStatusBar(this);
-    setStatusBar(mStatusBar);
+	mStatusBar = new QStatusBar(this);
+	setStatusBar(mStatusBar);
 
-    retranslateUi();
+	retranslateUi();
 
-    QMetaObject::connectSlotsByName(this);
+	QMetaObject::connectSlotsByName(this);
 }
 
 void MainWindow::retranslateUi() {
-    setWindowTitle(QCoreApplication::translate("MainWindow", "MainWindow", nullptr));
-    // openScriptButton->setText(QString());
-    // playButton->setText(QCoreApplication::translate("MainWindow", "Play script", nullptr));
-    // stopButton->setText(QCoreApplication::translate("MainWindow", "Stop script", nullptr));
-    // togglePauseButton->setText(QCoreApplication::translate("MainWindow", "Toggle game pause", nullptr));
-    // frameAdvanceButton->setText(QCoreApplication::translate("MainWindow", "Frame advance", nullptr));
-    // menuMeow->setTitle(QCoreApplication::translate("MainWindow", "Meow", nullptr));
+	setWindowTitle(QCoreApplication::translate("MainWindow", "MainWindow", nullptr));
+	// openScriptButton->setText(QString());
+	// playButton->setText(QCoreApplication::translate("MainWindow", "Play script", nullptr));
+	// stopButton->setText(QCoreApplication::translate("MainWindow", "Stop script", nullptr));
+	// togglePauseButton->setText(QCoreApplication::translate("MainWindow", "Toggle game pause", nullptr));
+	// frameAdvanceButton->setText(QCoreApplication::translate("MainWindow", "Frame advance", nullptr));
+	// menuMeow->setTitle(QCoreApplication::translate("MainWindow", "Meow", nullptr));
 }
 
 void MainWindow::addSection(QFrame* section, const QString& name, QHBoxLayout* row) {
@@ -245,7 +243,7 @@ void MainWindow::setupGameInfo() {
 	// QFormLayout* form = new QFormLayout(gameInfoWidget);
 	// gameInfoWidget->setLayout(form);
 
-	auto addRow = [&gameInfoWidget](const QString& name, QTableWidgetItem* item){
+	auto addRow = [&gameInfoWidget](const QString& name, QTableWidgetItem* item) {
 		item = new QTableWidgetItem;
 		int rowIdx = gameInfoWidget->rowCount();
 		gameInfoWidget->insertRow(rowIdx);

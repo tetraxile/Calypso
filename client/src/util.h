@@ -16,7 +16,7 @@
 		nn::Result _result = RESULT;                                                                                                                           \
 		if (_result.IsFailure()) {                                                                                                                             \
 			cly::Menu::log("ERROR: %s:%s (%04d-%04d)", __FILE__, __LINE__, _result.GetModule() + 2000, _result.GetDescription());                              \
-			return _result.GetInnerValueForDebug();                                                                                                                                            \
+			return _result.GetInnerValueForDebug();                                                                                                            \
 		}                                                                                                                                                      \
 	} while (0)
 

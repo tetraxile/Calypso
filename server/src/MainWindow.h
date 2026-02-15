@@ -8,72 +8,72 @@
 #include <QMenuBar>
 #include <QStatusBar>
 #include <QTableWidget>
-#include <QTcpSocket>
 #include <QTcpServer>
+#include <QTcpSocket>
 
 #include "LogWidget.h"
 #include "ScriptSTAS.h"
 
 class MainWindow : public QMainWindow {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
-    ~MainWindow() override;
+	MainWindow(QWidget* parent = nullptr);
+	~MainWindow() override;
 
-    void setupUi();
-    void retranslateUi();
+	void setupUi();
+	void retranslateUi();
 
 #ifdef __GNUC__
-    [[gnu::format(printf, 2, 3)]]
+	[[gnu::format(printf, 2, 3)]]
 #endif
-    void log(const char* fmt, ...) {
-        va_list args;
-        va_start(args, fmt);
+	void log(const char* fmt, ...) {
+		va_list args;
+		va_start(args, fmt);
 
-        QString out = QString::vasprintf(fmt, args);
+		QString out = QString::vasprintf(fmt, args);
 
-        mLogWidget->appendLine(out);
+		mLogWidget->appendLine(out);
 
-        va_end(args);
-    }
+		va_end(args);
+	}
 
 private slots:
-    void newConnection();
-    void disconnected();
-    void readClient();
-    void openFileButton();
-    void openFileRecent();
+	void newConnection();
+	void disconnected();
+	void readClient();
+	void openFileButton();
+	void openFileRecent();
 
 private:
-    void setupControls();
+	void setupControls();
 	void setupSavestates();
 	void setupLog();
 	void setupInputDisplay();
 	void setupGameInfo();
-    void addSection(QFrame* section, const QString& name, QHBoxLayout* row);
+	void addSection(QFrame* section, const QString& name, QHBoxLayout* row);
 
-    static const int RECENT_SCRIPTS_NUM = 10;
+	static const int RECENT_SCRIPTS_NUM = 10;
 
-    LogWidget* mLogWidget;
-    QHBoxLayout* mBottomRow;
-    QHBoxLayout* mTopRow;
-    QMenuBar *mMenuBar;
-    QStatusBar *mStatusBar;
-    QComboBox* mRecentScripts;
+	LogWidget* mLogWidget;
+	QHBoxLayout* mBottomRow;
+	QHBoxLayout* mTopRow;
+	QMenuBar* mMenuBar;
+	QStatusBar* mStatusBar;
+	QComboBox* mRecentScripts;
 
-    struct {
-        QLineEdit* name;
-        QLineEdit* author;
-        QLineEdit* commandCount;
-    } mScriptInfo;
+	struct {
+		QLineEdit* name;
+		QLineEdit* author;
+		QLineEdit* commandCount;
+	} mScriptInfo;
 
-    struct {
-        QTableWidgetItem* stageName;
-        QTableWidgetItem* playerPos;
-    } mGameInfo;
+	struct {
+		QTableWidgetItem* stageName;
+		QTableWidgetItem* playerPos;
+	} mGameInfo;
 
-    QTcpServer* mServer = nullptr;
-    QTcpSocket* mClientSocket = nullptr;
-    ScriptSTAS* mScript = nullptr;
+	QTcpServer* mServer = nullptr;
+	QTcpSocket* mClientSocket = nullptr;
+	ScriptSTAS* mScript = nullptr;
 };

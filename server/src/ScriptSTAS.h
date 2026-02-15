@@ -4,8 +4,7 @@
 
 class ScriptSTAS {
 public:
-    ScriptSTAS(const QFile& file);
+	ScriptSTAS(const QFile& file);
 
 private:
-
 };

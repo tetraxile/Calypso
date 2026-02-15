@@ -59,19 +59,16 @@ s32 Server::recvAll(u8* recvBuf, s32 remaining) {
 void Server::threadRecv() {
 	while (true) {
 		hk::Result r = handlePacket();
-		if (r.failed())
-			disconnect();
+		if (r.failed()) disconnect();
 		nn::os::SleepThread(nn::TimeSpan::FromSeconds(1));
 	}
 }
 
 hk::Result Server::handlePacket() {
-	if (mState != State::CONNECTED)
-		return hk::ResultSuccess();
+	if (mState != State::CONNECTED) return hk::ResultSuccess();
 
 	u8 header[cPacketHeaderSize];
-	if (recvAll(header, cPacketHeaderSize) <= 0)
-		return hk::ResultFailed();
+	if (recvAll(header, cPacketHeaderSize) <= 0) return hk::ResultFailed();
 	PacketType packetType = PacketType(header[0]);
 
 	switch (packetType) {
@@ -80,8 +77,7 @@ hk::Result Server::handlePacket() {
 		u32 scriptLen = sead::Endian::swapU32(*(u32*)&header[4]);
 
 		char scriptName[0x101];
-		if (recvAll((u8*)scriptName, 0xff) <= 0)
-			return hk::ResultFailed();
+		if (recvAll((u8*)scriptName, 0xff) <= 0) return hk::ResultFailed();
 		scriptName[0x100] = '\0';
 
 		log("received packet Script: name = %s, len = %d (%d)", scriptName, scriptLen);
@@ -100,8 +96,7 @@ hk::Result Server::handlePacket() {
 		while (totalWritten < scriptLen) {
 			s32 remaining = scriptLen - totalWritten;
 			s32 chunkLen = recvAll(chunkBuf, sead::Mathf::min(remaining, sizeof(chunkBuf)));
-			if (chunkLen <= 0)
-				return hk::ResultFailed();
+			if (chunkLen <= 0) return hk::ResultFailed();
 			LOG_R(nn::fs::WriteFile(fileHandle, totalWritten, chunkBuf, chunkLen, nn::fs::WriteOption::CreateOption(nn::fs::WriteOptionFlag_Flush)));
 			totalWritten += chunkLen;
 		}
@@ -114,8 +109,7 @@ hk::Result Server::handlePacket() {
 
 		break;
 	}
-	case PacketType::None:
-		break;
+	case PacketType::None: break;
 	}
 
 	return hk::ResultSuccess();
