@@ -5,7 +5,8 @@ compile_commands.json
 tmp/
 scripts/
 
-
 client/lib/std
 client/build
 client/.cache
+
+tools/__pycache__
