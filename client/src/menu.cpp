@@ -52,9 +52,15 @@ void Menu::init(sead::Heap* heap) {
 
 	MenuItem* itemConnect = addButton({ 0, 24 }, "connect", []() -> void {
 								cly::Server* server = cly::Server::instance();
-								s32 r = server->connect("192.168.2.62", 8171);
+								s32 r = server->connect();
 								if (r != 0) cly::Menu::log("Connection error: %s\n", strerror(r));
 							})->setSpan({ 2, 1 });
+
+	addButton({ 0, 25 }, "send UDP", []() -> void {
+		cly::Server* server = cly::Server::instance();
+		s32 r = server->sendUDPDatagram();
+		if (r != 0) cly::Menu::log("Connection error: %s\n", strerror(r));
+	})->setSpan({ 2, 1 });
 
 	// addButton({ 0, 25 }, "script: select...", []() -> void { tas::System::loadScript("cap_kfr.stas"); })->setSpan({ 2, 1 });
 	// TODO: grey button out if script not loaded

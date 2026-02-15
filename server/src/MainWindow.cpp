@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QListWidget>
 #include <QMenu>
+#include <QNetworkDatagram>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollBar>
@@ -18,29 +19,38 @@
 #include "util.h"
 
 void MainWindow::newConnection() {
-	mClientSocket = mServer->nextPendingConnection();
+	mTCPSocket = mServer->nextPendingConnection();
 
 	{
 		bool isV4 = false;
-		QHostAddress addrIPv6 = mClientSocket->peerAddress();
+		QHostAddress addrIPv6 = mTCPSocket->peerAddress();
 		QHostAddress addrIPv4 = QHostAddress(addrIPv6.toIPv4Address(&isV4));
 		QString addrStr = isV4 ? addrIPv4.toString() : addrIPv6.toString();
-		quint16 port = mClientSocket->peerPort();
+		quint16 port = mTCPSocket->peerPort();
 		log("connection received from %s:%d", qPrintable(addrStr), port);
 	}
 
-	connect(mClientSocket, &QTcpSocket::disconnected, mClientSocket, &QTcpSocket::deleteLater);
-	connect(mClientSocket, &QTcpSocket::disconnected, this, &MainWindow::disconnected);
-	connect(mClientSocket, &QTcpSocket::readyRead, this, &MainWindow::readClient);
+	connect(mTCPSocket, &QTcpSocket::disconnected, mTCPSocket, &QTcpSocket::deleteLater);
+	connect(mTCPSocket, &QTcpSocket::disconnected, this, &MainWindow::disconnected);
+	connect(mTCPSocket, &QTcpSocket::readyRead, this, &MainWindow::receiveTCPData);
 }
 
 void MainWindow::disconnected() {
 	log("client disconnected");
 }
 
-void MainWindow::readClient() {
-	QTextStream in(mClientSocket);
+void MainWindow::receiveTCPData() {
+	QTextStream in(mTCPSocket);
 	log("[switch] %s", qPrintable(in.readAll()));
+}
+
+void MainWindow::receiveUDPData() {
+	while (mUDPSocket->hasPendingDatagrams()) {
+		QNetworkDatagram datagram = mUDPSocket->receiveDatagram();
+		QByteArray data = datagram.data();
+		log("[UDP] received %lld bytes", data.size());
+		log("[UDP] %s", data.data());
+	}
 }
 
 void MainWindow::openFileButton() {
@@ -79,9 +89,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 	setupUi();
 
 	mServer = new QTcpServer(this);
-	mServer->listen(QHostAddress::Any, 8171);
-	log("listening for connection on port %d...", 8171);
+	mServer->listen(QHostAddress::Any, PORT);
 	connect(mServer, &QTcpServer::newConnection, this, &MainWindow::newConnection);
+	log("listening for TCP connection on port %d...", PORT);
+
+	mUDPSocket = new QUdpSocket(this);
+	mUDPSocket->bind(PORT);
+	connect(mUDPSocket, &QUdpSocket::readyRead, this, &MainWindow::receiveUDPData);
+	log("listening for UDP packets on port %d...", PORT);
 }
 
 MainWindow::~MainWindow() {

@@ -10,6 +10,7 @@
 #include <QTableWidget>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QUdpSocket>
 
 #include "LogWidget.h"
 #include "ScriptSTAS.h"
@@ -41,7 +42,8 @@ public:
 private slots:
 	void newConnection();
 	void disconnected();
-	void readClient();
+	void receiveTCPData();
+	void receiveUDPData();
 	void openFileButton();
 	void openFileRecent();
 
@@ -54,6 +56,7 @@ private:
 	void addSection(QFrame* section, const QString& name, QHBoxLayout* row);
 
 	static const int RECENT_SCRIPTS_NUM = 10;
+	static const int PORT = 8171;
 
 	LogWidget* mLogWidget;
 	QHBoxLayout* mBottomRow;
@@ -74,6 +77,7 @@ private:
 	} mGameInfo;
 
 	QTcpServer* mServer = nullptr;
-	QTcpSocket* mClientSocket = nullptr;
+	QTcpSocket* mTCPSocket = nullptr;
+	QUdpSocket* mUDPSocket = nullptr;
 	ScriptSTAS* mScript = nullptr;
 };

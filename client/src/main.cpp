@@ -53,8 +53,8 @@ HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSys
 	menu->init(heap);
 
 	cly::Server* server = cly::Server::createInstance(heap);
-	server->init(heap);
-	server->connect("192.168.2.62", 8171);
+	server->init(heap, "192.168.2.62");
+	server->connect();
 
 	cly::tas::System* system = cly::tas::System::createInstance(heap);
 	system->init(heap);

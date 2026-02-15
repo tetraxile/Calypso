@@ -8,7 +8,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <netdb.h>
-#include <netinet/in.h>
 #include <netinet/tcp.h>
 
 #include <nn/fs.h>
@@ -31,7 +30,7 @@ namespace cly {
 
 SEAD_SINGLETON_DISPOSER_IMPL(Server);
 
-void Server::init(sead::Heap* heap) {
+void Server::init(sead::Heap* heap, const sead::SafeString& serverIP) {
 	mHeap = heap;
 	sead::ScopedCurrentHeapSetter heapSetter(mHeap);
 
@@ -41,12 +40,17 @@ void Server::init(sead::Heap* heap) {
 	mRecvThread = new (mHeap) al::AsyncFunctorThread("Recv Thread", functor, 0, 0x20000, {});
 
 	disableSocketInit.installAtSym<"_ZN2nn6socket10InitializeEPvmmi">();
+
+	HK_ABORT_UNLESS(nn::socket::InetAton(serverIP.cstr(), &mServerIP), "failed to parse server IP");
+
+	mUDPSockFd = nn::socket::Socket(AF_INET, SOCK_DGRAM, 0);
+	HK_ABORT_UNLESS(mUDPSockFd >= 0, "failed to create UDP socket");
 }
 
 s32 Server::recvAll(u8* recvBuf, s32 remaining) {
 	s32 totalReceived = 0;
 	do {
-		s32 recvLen = nn::socket::Recv(mSockFd, recvBuf, remaining, 0);
+		s32 recvLen = nn::socket::Recv(mTCPSockFd, recvBuf, remaining, 0);
 		if (recvLen <= 0) return recvLen;
 		remaining -= recvLen;
 		recvBuf += recvLen;
@@ -115,38 +119,54 @@ hk::Result Server::handlePacket() {
 	return hk::ResultSuccess();
 }
 
-s32 Server::connect(const char* serverIP, u16 port) {
+s32 Server::sendUDPDatagram() {
+	if (mState != State::CONNECTED) return 0;
+
+	sockaddr_in serverAddr;
+	serverAddr.sin_addr = mServerIP;
+	serverAddr.sin_family = nn::socket::InetHtons(AF_INET);
+	serverAddr.sin_port = nn::socket::InetHtons(cPort);
+
+	char message[] = "hi from UDP";
+	s32 r = nn::socket::SendTo(mUDPSockFd, message, strlen(message), 0, (sockaddr*)&serverAddr, sizeof(serverAddr));
+	if (r < 0) {
+		disconnect();
+		return nn::socket::GetLastErrno();
+	}
+
+	return 0;
+}
+
+s32 Server::connect() {
 	if (mState == State::CONNECTED) disconnect();
 
-	in_addr hostAddress = { 0 };
-	sockaddr_in serverAddr = { 0 };
-
 	// create socket
-	if ((mSockFd = nn::socket::Socket(AF_INET, SOCK_STREAM, 0)) < 0) return nn::socket::GetLastErrno();
+	if ((mTCPSockFd = nn::socket::Socket(AF_INET, SOCK_STREAM, 0)) < 0) return nn::socket::GetLastErrno();
 
 	// disable Nagle's algorithm (which would delay sending packets to group smaller ones together)
 	{
 		const s32 i = 1;
-		nn::socket::SetSockOpt(mSockFd, IPPROTO_TCP, TCP_NODELAY, &i, sizeof(i));
+		nn::socket::SetSockOpt(mTCPSockFd, IPPROTO_TCP, TCP_NODELAY, &i, sizeof(i));
 	}
 
 	// configure server to connect to
-	nn::socket::InetAton(serverIP, &hostAddress);
-	serverAddr.sin_addr = hostAddress;
+	sockaddr_in serverAddr;
+	serverAddr.sin_addr = mServerIP;
 	serverAddr.sin_family = nn::socket::InetHtons(AF_INET);
-	serverAddr.sin_port = nn::socket::InetHtons(port);
+	serverAddr.sin_port = nn::socket::InetHtons(cPort);
 
 	// connect to server
-	nn::Result result = nn::socket::Connect(mSockFd, (sockaddr*)&serverAddr, sizeof(serverAddr));
+	nn::Result result = nn::socket::Connect(mTCPSockFd, (sockaddr*)&serverAddr, sizeof(serverAddr));
 	if (result.IsFailure()) return nn::socket::GetLastErrno();
 
 	mState = State::CONNECTED;
 
-	cly::Menu::log("Connected to %s:%d!", serverIP, port);
+	const char* serverIP = nn::socket::InetNtoa(mServerIP);
+	cly::Menu::log("Connected to %s:%d!", serverIP, cPort);
 
 	// send message to server
 	char message[] = "connected!";
-	s32 r = nn::socket::Send(mSockFd, message, strlen(message), 0);
+	s32 r = nn::socket::Send(mTCPSockFd, message, strlen(message), 0);
 	if (r < 0) {
 		disconnect();
 		return nn::socket::GetLastErrno();
@@ -165,7 +185,7 @@ void Server::log(const char* fmt, ...) {
 	char message[0x400];
 	vsnprintf(message, sizeof(message), fmt, args);
 
-	s32 r = nn::socket::Send(server->mSockFd, message, strlen(message), 0);
+	s32 r = nn::socket::Send(server->mTCPSockFd, message, strlen(message), 0);
 
 	va_end(args);
 }
@@ -173,7 +193,7 @@ void Server::log(const char* fmt, ...) {
 void Server::disconnect() {
 	cly::Menu::log("disconnected from server");
 	mState = State::DISCONNECTED;
-	nn::socket::Close(mSockFd);
+	nn::socket::Close(mTCPSockFd);
 }
 
 } // namespace cly
