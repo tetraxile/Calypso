@@ -1,0 +1,119 @@
+CHANGELOG:
+v0 -> v1:
+- Increase COMMAND.size to 0x6 (48 Bits)
+- Add 32768=COMMENT
+- Adjust how controller types are stored in the header (constant array of enums)
+- Add game-specific header to script header
+- For CONTROLLER (command=1): Decrease buttons to 0x7, pack closer to sizeof(CONTROLLER)=0x18
+- For CONTROLLER (command=1): Change format of stick from (long) to (int, int)
+
+
+
+HEADER:
+
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 4      | magic, "STAS" (SwitchTAS)
+0x4     | 2      | version (file format), 0x0001
+0x6     | 2      | version (game addon)
+0x8     | 2 (+2) | version (editor extras)
+0xC     | 8      | game title id
+--------+--------+-----------------------------------------
+total   | 0x14   |
+
+
+SCRIPT HEADER:
+
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 4      | command count, u32
+0x4     | 4      | seconds spent editing, u32
+0x8     | 0x8    | controller type per player (NONE=0, PROCON=1, DUAL_JOYCON=2, LEFT_JOYCON=3, RIGHT_JOYCON=4, HANDHELD=5)
+0x10    | 2      | length of author name
+0x12    | m      | author name (UTF-8)
+...%0x4 (end, pad with 0-bytes if neccessary)
+...%0x4 | 8      | size of game-header (p)
+...%0x4 | p      | game-header information
+
+
+
+
+
+COMMAND:
+
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 2      | type/tag (0-32767 = generic, 32768-49151 = editor data, 49152-65535 = game-specific)
+0x2     | 6      | size (n)
+0x8     | n      | data
+
+FRAME: command=0 (waits until the listed frame)
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 4      | frame ID, u32 (game-specific how it is counted)
+--------+--------+-----------------------------------------
+total   | 0x4    |
+
+CONTROLLER: command=1 (normal controller inputs)
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 1      | player ID
+0x1     | 7      | buttons
+0x8     | 8      | left stick (int, int)
+0x10    | 8      | right stick (int, int)
+--------+--------+-----------------------------------------
+total   | 0x18   |
+
+
+MOTION: command=2 (motion inputs)
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 1      | player ID
+0x1     | 1 (+2) | player controller ID (only if DUAL_JOYCON is used, LEFT=0, RIGHT=1, BOTH=2)
+0x4     | 12     | accel, Vector3f
+0x10    | 12     | gyro, Vector3f
+--------+--------+-----------------------------------------
+total   | 0x1C   |
+
+AMIIBO: command=3 (amiibo inputs)
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 8      | amiibo (ModelInfo)
+--------+--------+-----------------------------------------
+total   | 0x8    |
+
+TOUCH: command=4 (touchpad inputs)
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 4      | entry count (s32) - (n)
+0x4     | n*0x10 | TouchEntry
+
+TouchEntry
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 1      | touch attribute (START=0, END=1)
+0x4     | 4      | finger ID (u32)
+0x8     | 8      | position
+--------+--------+-----------------------------------------
+total   | 0x10   |
+
+MOUSE/KEYBOARD/RING FIT/... will take command=5...
+
+
+
+EDITOR-DATA:
+
+Comment: command=32768
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | m      | comment, size is taken from COMMAND header
+...%0x4 (end, pad with 0-bytes if neccessary)
+
+
+EXAMPLE GAME-COMMAND: "go"
+
+offset  | size   | note
+--------+--------+-------------------
+0x0     | 0x80   | stage name, string
+0x80    | 0x80   | entrance name, string
+0x100   | 4      | scenario number, s32

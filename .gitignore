@@ -3,6 +3,7 @@ build/
 compile_commands.json
 .vscode/
 tmp/
+scripts/
 
 
 client/lib/std
