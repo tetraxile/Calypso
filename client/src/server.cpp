@@ -37,6 +37,9 @@ void Server::init(sead::Heap* heap) {
 
 	nn::socket::Initialize(socketPool, socketPoolSize, socketAllocPoolSize, 0xE);
 
+	al::FunctorV0M functor(this, &Server::threadRecv);
+	mRecvThread = new (mHeap) al::AsyncFunctorThread("Recv Thread", functor, 0, 0x20000, {});
+
 	disableSocketInit.installAtSym<"_ZN2nn6socket10InitializeEPvmmi">();
 }
 
@@ -63,6 +66,9 @@ void Server::threadRecv() {
 }
 
 hk::Result Server::handlePacket() {
+	if (mState != State::CONNECTED)
+		return hk::ResultSuccess();
+
 	u8 header[cPacketHeaderSize];
 	if (recvAll(header, cPacketHeaderSize) <= 0)
 		return hk::ResultFailed();
@@ -116,7 +122,7 @@ hk::Result Server::handlePacket() {
 }
 
 s32 Server::connect(const char* serverIP, u16 port) {
-	if (mState == State::CONNECTED) return 0;
+	if (mState == State::CONNECTED) disconnect();
 
 	in_addr hostAddress = { 0 };
 	sockaddr_in serverAddr = { 0 };
@@ -147,13 +153,9 @@ s32 Server::connect(const char* serverIP, u16 port) {
 	// send message to server
 	char message[] = "connected!";
 	s32 r = nn::socket::Send(mSockFd, message, strlen(message), 0);
-	if (r < 0) return nn::socket::GetLastErrno();
-
-	{
-		sead::ScopedCurrentHeapSetter heapSetter(mHeap);
-		al::FunctorV0M functor(this, &Server::threadRecv);
-		mRecvThread = new (mHeap) al::AsyncFunctorThread("Recv Thread", functor, 0, 0x20000, {});
-		mRecvThread->start();
+	if (r < 0) {
+		disconnect();
+		return nn::socket::GetLastErrno();
 	}
 
 	return 0;
@@ -161,7 +163,7 @@ s32 Server::connect(const char* serverIP, u16 port) {
 
 void Server::log(const char* fmt, ...) {
 	Server* server = instance();
-	if (server->mState != Server::State::CONNECTED) return;
+	if (server->mState != State::CONNECTED) return;
 
 	va_list args;
 	va_start(args, fmt);
@@ -177,7 +179,7 @@ void Server::log(const char* fmt, ...) {
 void Server::disconnect() {
 	cly::Menu::log("disconnected from server");
 	mState = State::DISCONNECTED;
-	delete mRecvThread;
+	nn::socket::Close(mSockFd);
 }
 
 } // namespace cly
