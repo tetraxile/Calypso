@@ -10,8 +10,9 @@ target_sources(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME}
     PRIVATE
-        ../include/custom/sead
         ../include/custom
+        ../include/custom/sead
+        ../include/custom/al
 
         ../include
         ../include/aarch64
