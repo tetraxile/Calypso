@@ -162,7 +162,7 @@ s32 Server::connect() {
 	mState = State::CONNECTED;
 
 	const char* serverIP = nn::socket::InetNtoa(mServerIP);
-	cly::Menu::log("Connected to %s:%d!", serverIP, cPort);
+	Menu::log("Connected to %s:%d!", serverIP, cPort);
 
 	// send message to server
 	char message[] = "connected!";
@@ -191,7 +191,7 @@ void Server::log(const char* fmt, ...) {
 }
 
 void Server::disconnect() {
-	cly::Menu::log("disconnected from server");
+	Menu::log("disconnected from server");
 	mState = State::DISCONNECTED;
 	nn::socket::Close(mTCPSockFd);
 }

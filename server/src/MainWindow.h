@@ -48,6 +48,8 @@ private slots:
 	void openFileRecent();
 
 private:
+	void closeEvent(QCloseEvent* event) override;
+
 	void setupControls();
 	void setupSavestates();
 	void setupLog();

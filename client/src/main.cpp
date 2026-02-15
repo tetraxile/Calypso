@@ -101,11 +101,11 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 		cly::Menu::instance()->handleInput(controller->mPadHold);
 	}
 
-	if (cly::Menu::isActive()) {
-		controller->mPadHold.makeAllZero();
-		controller->mLeftStick.set(sead::Vector2f::zero);
-		controller->mRightStick.set(sead::Vector2f::zero);
-	}
+	// if (cly::Menu::isActive()) {
+	// 	controller->mPadHold.makeAllZero();
+	// 	controller->mLeftStick.set(sead::Vector2f::zero);
+	// 	controller->mRightStick.set(sead::Vector2f::zero);
+	// }
 
 	if (!cly::tas::System::isReplaying()) return;
 

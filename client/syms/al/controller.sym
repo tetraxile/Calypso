@@ -17,8 +17,8 @@ _ZN2al11isPadHoldUpEi
 _ZN2al13isPadHoldDownEi
 _ZN2al13isPadHoldLeftEi
 _ZN2al14isPadHoldRightEi
-_ZN2al18isPadHoldLeftStickEi
-_ZN2al19isPadHoldRightStickEi
+_ZN2al23isPadHoldPressLeftStickEi
+_ZN2al24isPadHoldPressRightStickEi
 _ZN2al11isPadHoldZREi
 _ZN2al11isPadHoldZLEi
 _ZN2al10isPadHoldLEi

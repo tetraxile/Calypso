@@ -99,6 +99,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 	log("listening for UDP packets on port %d...", PORT);
 }
 
+void MainWindow::closeEvent(QCloseEvent* event) {
+	if (mTCPSocket) mTCPSocket->close();
+	mServer->close();
+
+	event->accept();
+}
+
 MainWindow::~MainWindow() {
 	// delete mViewport;
 }

@@ -53,13 +53,13 @@ void Menu::init(sead::Heap* heap) {
 	MenuItem* itemConnect = addButton({ 0, 24 }, "connect", []() -> void {
 								cly::Server* server = cly::Server::instance();
 								s32 r = server->connect();
-								if (r != 0) cly::Menu::log("Connection error: %s\n", strerror(r));
+								if (r != 0) log("Connection error: %s\n", strerror(r));
 							})->setSpan({ 2, 1 });
 
 	addButton({ 0, 25 }, "send UDP", []() -> void {
 		cly::Server* server = cly::Server::instance();
 		s32 r = server->sendUDPDatagram();
-		if (r != 0) cly::Menu::log("Connection error: %s\n", strerror(r));
+		if (r != 0) log("Connection error: %s\n", strerror(r));
 	})->setSpan({ 2, 1 });
 
 	// addButton({ 0, 25 }, "script: select...", []() -> void { tas::System::loadScript("cap_kfr.stas"); })->setSpan({ 2, 1 });
@@ -195,15 +195,15 @@ void Menu::drawInputDisplay() {
 
 	// left stick
 	sead::Vector2f leftStickPos = al::getLeftStick();
-	Vector2f leftStickOffset = Vector2f(leftStickPos.x, leftStickPos.y) * 20.0f;
+	Vector2f leftStickOffset = Vector2f(leftStickPos.x, -leftStickPos.y) * 20.0f;
 	drawCircle16(startPos + Vector2f(50, 85), 30, onCol);
-	drawDisk16(startPos + Vector2f(50, 85) + leftStickOffset, 20, al::isPadHoldLeftStick() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(50, 85) + leftStickOffset, 20, al::isPadHoldPressLeftStick() ? onCol : offCol);
 
 	// right stick
 	sead::Vector2f rightStickPos = al::getRightStick();
-	Vector2f rightStickOffset = Vector2f(rightStickPos.x, rightStickPos.y) * 20.0f;
+	Vector2f rightStickOffset = Vector2f(rightStickPos.x, -rightStickPos.y) * 20.0f;
 	drawCircle16(startPos + Vector2f(290, 85), 30, onCol);
-	drawDisk16(startPos + Vector2f(290, 85) + rightStickOffset, 20, al::isPadHoldRightStick() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(290, 85) + rightStickOffset, 20, al::isPadHoldPressRightStick() ? onCol : offCol);
 
 	// d-pad
 	drawDisk16(startPos + Vector2f(110, 85), 10, al::isPadHoldLeft() ? onCol : offCol);
@@ -226,8 +226,8 @@ void Menu::drawInputDisplay() {
 	drawQuad(startPos + Vector2f(215, 10), { 40, 20 }, al::isPadHoldR() ? onCol : offCol, 10);
 
 	// plus/minus
-	drawDisk16(startPos + Vector2f(150, 35), 7, al::isPadHoldPlus() ? onCol : offCol);
-	drawDisk16(startPos + Vector2f(190, 35), 7, al::isPadHoldMinus() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(150, 35), 7, al::isPadHoldMinus() ? onCol : offCol);
+	drawDisk16(startPos + Vector2f(190, 35), 7, al::isPadHoldPlus() ? onCol : offCol);
 }
 
 /*
