@@ -112,7 +112,7 @@ def build_server(job_count: int) -> int:
     return 0
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("target", choices=("client", "server", "all"), default="all", nargs="?")
     parser.add_argument("-j", "--jobs", type=int, default=os.cpu_count())
@@ -141,6 +141,8 @@ def main():
             if (r := build_client(args.jobs)): return r
         if "server" in targets:
             if (r := build_server(args.jobs)): return r
+    
+    return 0
 
 
 if __name__ == "__main__":
