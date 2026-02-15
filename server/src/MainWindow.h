@@ -1,11 +1,18 @@
 #pragma once
 
+#include <QComboBox>
 #include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
 #include <QMainWindow>
+#include <QMenuBar>
+#include <QStatusBar>
+#include <QTableWidget>
 #include <QTcpSocket>
 #include <QTcpServer>
 
 #include "LogWidget.h"
+#include "ScriptSTAS.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -35,6 +42,8 @@ private slots:
     void newConnection();
     void disconnected();
     void readClient();
+    void openFileButton();
+    void openFileRecent();
 
 private:
     void setupControls();
@@ -44,13 +53,27 @@ private:
 	void setupGameInfo();
     void addSection(QFrame* section, const QString& name, QHBoxLayout* row);
 
+    static const int RECENT_SCRIPTS_NUM = 10;
+
     LogWidget* mLogWidget;
     QHBoxLayout* mBottomRow;
     QHBoxLayout* mTopRow;
     QMenuBar *mMenuBar;
-    QMenu *menuMeow;
     QStatusBar *mStatusBar;
+    QComboBox* mRecentScripts;
+
+    struct {
+        QLineEdit* name;
+        QLineEdit* author;
+        QLineEdit* commandCount;
+    } mScriptInfo;
+
+    struct {
+        QTableWidgetItem* stageName;
+        QTableWidgetItem* playerPos;
+    } mGameInfo;
 
     QTcpServer* mServer = nullptr;
     QTcpSocket* mClientSocket = nullptr;
+    ScriptSTAS* mScript = nullptr;
 };

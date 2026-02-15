@@ -1,20 +1,21 @@
 #include "MainWindow.h"
 
-#include <QComboBox>
 #include <QCoreApplication>
+#include <QFileDialog>
 #include <QFormLayout>
 #include <QFrame>
+#include <QHeaderView>
 #include <QLabel>
-#include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
-#include <QMenuBar>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollBar>
 #include <QSizePolicy>
-#include <QStatusBar>
 #include <QTableWidget>
+#include <QVector3D>
+
+#include "util.h"
 
 
 void MainWindow::newConnection() {
@@ -41,6 +42,38 @@ void MainWindow::disconnected() {
 void MainWindow::readClient() {
     QTextStream in(mClientSocket);
     log("[switch] %s", qPrintable(in.readAll()));
+}
+
+void MainWindow::openFileButton() {
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Select a script"), "", tr("STAS scripts (*.stas)"));
+	if (fileName.isEmpty()) return;
+
+	QFile file(fileName);
+	if (!file.open(QIODevice::ReadOnly)) {
+		log("could not open file: %s", qPrintable(fileName));
+		return;
+	}
+
+	log("opening file: %s", qPrintable(fileName));
+	if (mScript) delete mScript;
+	mScript = new ScriptSTAS(file);
+	
+	mRecentScripts->insertItem(0, fileName);
+	mRecentScripts->setCurrentIndex(0);
+}
+
+void MainWindow::openFileRecent() {
+	QString fileName = mRecentScripts->currentText();
+
+	QFile file(fileName);
+	if (!file.open(QIODevice::ReadOnly)) {
+		log("could not open file: %s", qPrintable(fileName));
+		return;
+	}
+
+	log("opening file: %s", qPrintable(fileName));
+	if (mScript) delete mScript;
+	mScript = new ScriptSTAS(file);
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -78,7 +111,7 @@ void MainWindow::setupUi() {
 
     mMenuBar = new QMenuBar(this);
     setMenuBar(mMenuBar);
-    menuMeow = new QMenu(mMenuBar);
+    QMenu* menuMeow = new QMenu(mMenuBar);
     mMenuBar->addAction(menuMeow->menuAction());
 
     mStatusBar = new QStatusBar(this);
@@ -96,7 +129,7 @@ void MainWindow::retranslateUi() {
     // stopButton->setText(QCoreApplication::translate("MainWindow", "Stop script", nullptr));
     // togglePauseButton->setText(QCoreApplication::translate("MainWindow", "Toggle game pause", nullptr));
     // frameAdvanceButton->setText(QCoreApplication::translate("MainWindow", "Frame advance", nullptr));
-    menuMeow->setTitle(QCoreApplication::translate("MainWindow", "Meow", nullptr));
+    // menuMeow->setTitle(QCoreApplication::translate("MainWindow", "Meow", nullptr));
 }
 
 void MainWindow::addSection(QFrame* section, const QString& name, QHBoxLayout* row) {
@@ -127,14 +160,13 @@ void MainWindow::setupControls() {
 		QHBoxLayout* row = new QHBoxLayout;
 		controlsLayout->addLayout(row);
 
-		QComboBox* recentScripts = new QComboBox;
-		recentScripts->addItem("");
-		recentScripts->addItem("mreow");
-		recentScripts->addItem("mreow");
-		recentScripts->addItem("mreow");
-		row->addWidget(recentScripts);
+		mRecentScripts = new QComboBox;
+		connect(mRecentScripts, &QComboBox::textActivated, this, &MainWindow::openFileRecent);
+		mRecentScripts->setMaxCount(RECENT_SCRIPTS_NUM);
+		row->addWidget(mRecentScripts);
 
 		QPushButton* openButton = new QPushButton(tr("Open"));
+		connect(openButton, &QPushButton::clicked, this, &MainWindow::openFileButton);
 		openButton->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum));
 		row->addWidget(openButton);
 	}
@@ -166,21 +198,21 @@ void MainWindow::setupControls() {
 		QFormLayout* form = new QFormLayout;
 		controlsLayout->addLayout(form);
 
-		QLineEdit* scriptNameWidget = new QLineEdit;
-		scriptNameWidget->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
-		scriptNameWidget->setReadOnly(true);
-		form->addRow(tr("Script name"), scriptNameWidget);
+		mScriptInfo.name = new QLineEdit;
+		mScriptInfo.name->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
+		mScriptInfo.name->setReadOnly(true);
+		form->addRow(tr("Script name"), mScriptInfo.name);
 
-		QLineEdit* authorWidget = new QLineEdit;
-		authorWidget->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
-		authorWidget->setReadOnly(true);
-		authorWidget->setCursorPosition(0);
-		form->addRow(tr("Author"), authorWidget);
+		mScriptInfo.author = new QLineEdit;
+		mScriptInfo.author->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
+		mScriptInfo.author->setReadOnly(true);
+		mScriptInfo.author->setCursorPosition(0);
+		form->addRow(tr("Author"), mScriptInfo.author);
 
-		QLineEdit* commandCountWidget = new QLineEdit;
-		commandCountWidget->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
-		commandCountWidget->setReadOnly(true);
-		form->addRow(tr("Command count"), commandCountWidget);
+		mScriptInfo.commandCount = new QLineEdit;
+		mScriptInfo.commandCount->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
+		mScriptInfo.commandCount->setReadOnly(true);
+		form->addRow(tr("Command count"), mScriptInfo.commandCount);
 	}
 }
 
@@ -201,19 +233,28 @@ void MainWindow::setupInputDisplay() {
 }
 
 void MainWindow::setupGameInfo() {
-	QFrame* gameInfoWidget = new QFrame;
+	QTableWidget* gameInfoWidget = new QTableWidget;
 	addSection(gameInfoWidget, tr("Game info"), mBottomRow);
+	gameInfoWidget->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
+	gameInfoWidget->setColumnCount(2);
+	gameInfoWidget->horizontalHeader()->setStretchLastSection(true);
+	gameInfoWidget->verticalHeader()->hide();
+	gameInfoWidget->horizontalHeader()->hide();
+	gameInfoWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-	QFormLayout* form = new QFormLayout(gameInfoWidget);
-	gameInfoWidget->setLayout(form);
+	// QFormLayout* form = new QFormLayout(gameInfoWidget);
+	// gameInfoWidget->setLayout(form);
 
-	QLineEdit* stageName = new QLineEdit;
-	stageName->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
-	stageName->setReadOnly(true);
-	form->addRow(tr("Stage name"), stageName);
+	auto addRow = [&gameInfoWidget](const QString& name, QTableWidgetItem* item){
+		item = new QTableWidgetItem;
+		int rowIdx = gameInfoWidget->rowCount();
+		gameInfoWidget->insertRow(rowIdx);
+		gameInfoWidget->setItem(rowIdx, 0, new QTableWidgetItem(name));
+		gameInfoWidget->setItem(rowIdx, 1, item);
+	};
 
-	QLineEdit* playerPos = new QLineEdit;
-	playerPos->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
-	playerPos->setReadOnly(true);
-	form->addRow(tr("Player position"), playerPos);
+	addRow(tr("Stage name"), mGameInfo.stageName);
+	addRow(tr("Player position"), mGameInfo.playerPos);
+	QVector3D playerPos = { 0.0f, 0.0f, 0.0f };
+	vec3ToString(playerPos);
 }

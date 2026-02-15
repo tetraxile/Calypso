@@ -5,6 +5,8 @@ target_sources(${PROJECT_NAME}
         main.cpp
         MainWindow.cpp
         LogWidget.cpp
+        util.cpp
+        ScriptSTAS.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
