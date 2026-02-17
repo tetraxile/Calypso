@@ -1,7 +1,8 @@
 #include <QApplication>
 
+#include <hk/types.h>
+
 #include "MainWindow.h"
-#include "types.h"
 
 s32 main(s32 argc, char* argv[]) {
 	QApplication application(argc, argv);

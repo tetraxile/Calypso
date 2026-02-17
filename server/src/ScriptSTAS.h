@@ -2,9 +2,15 @@
 
 #include <QFile>
 
-class ScriptSTAS {
-public:
-	ScriptSTAS(const QFile& file);
+#include <hk/Result.h>
+#include <hk/types.h>
 
-private:
+struct ScriptSTAS {
+	ScriptSTAS(QFile& file);
+	hk::Result readHeader();
+	void close();
+
+	QFile& file;
+	QString name;
+	QString author;
 };

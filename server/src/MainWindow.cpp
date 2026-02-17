@@ -16,7 +16,8 @@
 #include <QTableWidget>
 #include <QVector3D>
 
-#include "types.h"
+#include <hk/types.h>
+
 #include "util.h"
 
 void MainWindow::newConnection() {
@@ -70,6 +71,8 @@ void MainWindow::openFileButton() {
 
 	mRecentScripts->insertItem(0, fileName);
 	mRecentScripts->setCurrentIndex(0);
+
+	parseScript();
 }
 
 void MainWindow::openFileRecent() {
@@ -84,6 +87,16 @@ void MainWindow::openFileRecent() {
 	log("opening file: %s", qPrintable(fileName));
 	if (mScript) delete mScript;
 	mScript = new ScriptSTAS(file);
+
+	parseScript();
+}
+
+void MainWindow::parseScript() {
+	mScript->readHeader();
+
+	log("script name: %s", qPrintable(mScript->name));
+
+	mScript->close();
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -103,6 +116,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 void MainWindow::closeEvent(QCloseEvent* event) {
 	if (mTCPSocket) mTCPSocket->close();
 	mServer->close();
+
+	if (mScript) mScript->close();
 
 	event->accept();
 }
