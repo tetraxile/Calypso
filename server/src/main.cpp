@@ -1,8 +1,9 @@
 #include <QApplication>
 
 #include "MainWindow.h"
+#include "types.h"
 
-int main(int argc, char* argv[]) {
+s32 main(s32 argc, char* argv[]) {
 	QApplication application(argc, argv);
 
 	MainWindow window;

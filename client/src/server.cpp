@@ -22,8 +22,8 @@
 
 HkTrampoline<void> disableSocketInit = hk::hook::trampoline([]() -> void {});
 
-static constexpr int socketPoolSize = 0x600000;
-static constexpr int socketAllocPoolSize = 0x20000;
+static constexpr s32 socketPoolSize = 0x600000;
+static constexpr s32 socketAllocPoolSize = 0x20000;
 char socketPool[socketPoolSize + socketAllocPoolSize] __attribute__((aligned(0x1000)));
 
 namespace cly {

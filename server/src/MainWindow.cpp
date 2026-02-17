@@ -16,6 +16,7 @@
 #include <QTableWidget>
 #include <QVector3D>
 
+#include "types.h"
 #include "util.h"
 
 void MainWindow::newConnection() {
@@ -26,7 +27,7 @@ void MainWindow::newConnection() {
 		QHostAddress addrIPv6 = mTCPSocket->peerAddress();
 		QHostAddress addrIPv4 = QHostAddress(addrIPv6.toIPv4Address(&isV4));
 		QString addrStr = isV4 ? addrIPv4.toString() : addrIPv6.toString();
-		quint16 port = mTCPSocket->peerPort();
+		u16 port = mTCPSocket->peerPort();
 		log("connection received from %s:%d", qPrintable(addrStr), port);
 	}
 
@@ -267,7 +268,7 @@ void MainWindow::setupGameInfo() {
 
 	auto addRow = [&gameInfoWidget](const QString& name, QTableWidgetItem* item) {
 		item = new QTableWidgetItem;
-		int rowIdx = gameInfoWidget->rowCount();
+		s32 rowIdx = gameInfoWidget->rowCount();
 		gameInfoWidget->insertRow(rowIdx);
 		gameInfoWidget->setItem(rowIdx, 0, new QTableWidgetItem(name));
 		gameInfoWidget->setItem(rowIdx, 1, item);

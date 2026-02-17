@@ -14,6 +14,7 @@
 
 #include "LogWidget.h"
 #include "ScriptSTAS.h"
+#include "types.h"
 
 class MainWindow : public QMainWindow {
 	Q_OBJECT
@@ -57,8 +58,8 @@ private:
 	void setupGameInfo();
 	void addSection(QFrame* section, const QString& name, QHBoxLayout* row);
 
-	static const int RECENT_SCRIPTS_NUM = 10;
-	static const int PORT = 8171;
+	static const s32 RECENT_SCRIPTS_NUM = 10;
+	static const s32 PORT = 8171;
 
 	LogWidget* mLogWidget;
 	QHBoxLayout* mBottomRow;
