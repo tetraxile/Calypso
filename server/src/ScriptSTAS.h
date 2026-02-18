@@ -5,6 +5,8 @@
 #include <hk/Result.h>
 #include <hk/types.h>
 
+#include "reader.h"
+
 struct ScriptSTAS {
 	ScriptSTAS(QFile& file);
 	hk::Result readHeader();
@@ -13,4 +15,7 @@ struct ScriptSTAS {
 	QFile& file;
 	QString name;
 	QString author;
+
+private:
+	BinaryReader reader;
 };
