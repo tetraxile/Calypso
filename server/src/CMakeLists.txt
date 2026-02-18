@@ -8,6 +8,8 @@ target_sources(${PROJECT_NAME}
         util.cpp
         ScriptSTAS.cpp
         BinaryReader.cpp
+
+        hk/diag.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
