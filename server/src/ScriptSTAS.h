@@ -5,7 +5,7 @@
 #include <hk/Result.h>
 #include <hk/types.h>
 
-#include "reader.h"
+#include "BinaryReader.h"
 
 struct ScriptSTAS {
 	ScriptSTAS(QFile& file);
