@@ -24,6 +24,7 @@ public:
 	hk::ValueOrResult<f32> readF32();
 	hk::ValueOrResult<f64> readF64();
 	hk::ValueOrResult<bool> readBool();
+	hk::ValueOrResult<QString> readString(size len);
 
 	hk::Result checkSignature(const QString& expected);
 	void alignUp(size alignment);
@@ -31,6 +32,8 @@ public:
 	size position() const { return mCursor; }
 
 private:
+	u8 at(size offset) const { return mBuffer.at(offset); }
+
 	QByteArray mBuffer;
 	size mCursor = 0;
 };

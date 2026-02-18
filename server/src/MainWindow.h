@@ -58,7 +58,8 @@ private:
 	void setupInputDisplay();
 	void setupGameInfo();
 	void addSection(QFrame* section, const QString& name, QHBoxLayout* row);
-	void parseScript();
+	hk::Result parseScript();
+	void clearScript();
 
 	static const s32 RECENT_SCRIPTS_NUM = 10;
 	static const s32 PORT = 8171;

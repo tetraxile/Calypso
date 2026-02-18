@@ -24,7 +24,7 @@ hk::Result BinaryReader::checkSignature(const QString& expected) {
 hk::ValueOrResult<u8> BinaryReader::readU8() {
 	const size len = sizeof(u8);
 	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
-	return mBuffer.at(mCursor++);
+	return at(mCursor++);
 }
 
 hk::ValueOrResult<u16> BinaryReader::readU16() {
@@ -33,7 +33,11 @@ hk::ValueOrResult<u16> BinaryReader::readU16() {
 
 	size start = mCursor;
 	mCursor += len;
-	return mBuffer.at(start) | (mBuffer.at(start + 1) << 8);
+
+	u16 out = 0;
+	for (s32 i = 0; i < 2; i++)
+		out |= static_cast<u16>(at(start + i)) << (i * 8);
+	return out;
 }
 
 hk::ValueOrResult<u32> BinaryReader::readU32() {
@@ -42,7 +46,11 @@ hk::ValueOrResult<u32> BinaryReader::readU32() {
 
 	size start = mCursor;
 	mCursor += len;
-	return mBuffer.at(start) | (mBuffer.at(start + 1) << 8) | (mBuffer.at(start + 2) << 16) | (mBuffer.at(start + 3) << 24);
+
+	u32 out = 0;
+	for (s32 i = 0; i < 4; i++)
+		out |= static_cast<u32>(at(start + i)) << (i * 8);
+	return out;
 }
 
 hk::ValueOrResult<u64> BinaryReader::readU64() {
@@ -52,16 +60,16 @@ hk::ValueOrResult<u64> BinaryReader::readU64() {
 	size start = mCursor;
 	mCursor += len;
 
-	u64 tmp1 = mBuffer.at(start + 0) | (mBuffer.at(start + 1) << 8) | (mBuffer.at(start + 2) << 16) | (mBuffer.at(start + 3) << 24);
-	u64 tmp2 = mBuffer.at(start + 4) | (mBuffer.at(start + 5) << 8) | (mBuffer.at(start + 6) << 16) | (mBuffer.at(start + 7) << 24);
-
-	return tmp1 | (tmp2 << 32);
+	u64 out = 0;
+	for (s32 i = 0; i < 8; i++)
+		out |= static_cast<u64>(at(start + i)) << (i * 8);
+	return out;
 }
 
 hk::ValueOrResult<s8> BinaryReader::readS8() {
 	const size len = sizeof(u8);
 	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
-	return mBuffer.at(mCursor++);
+	return at(mCursor++);
 }
 
 hk::ValueOrResult<s16> BinaryReader::readS16() {
@@ -70,7 +78,11 @@ hk::ValueOrResult<s16> BinaryReader::readS16() {
 
 	size start = mCursor;
 	mCursor += len;
-	return mBuffer.at(start) | (mBuffer.at(start + 1) << 8);
+
+	s16 out = 0;
+	for (s32 i = 0; i < 2; i++)
+		out |= static_cast<s16>(at(start + i)) << (i * 8);
+	return out;
 }
 
 hk::ValueOrResult<s32> BinaryReader::readS32() {
@@ -79,7 +91,11 @@ hk::ValueOrResult<s32> BinaryReader::readS32() {
 
 	size start = mCursor;
 	mCursor += len;
-	return mBuffer.at(start) | (mBuffer.at(start + 1) << 8) | (mBuffer.at(start + 2) << 16) | (mBuffer.at(start + 3) << 24);
+
+	s32 out = 0;
+	for (s32 i = 0; i < 4; i++)
+		out |= static_cast<s32>(at(start + i)) << (i * 8);
+	return out;
 }
 
 hk::ValueOrResult<s64> BinaryReader::readS64() {
@@ -89,10 +105,10 @@ hk::ValueOrResult<s64> BinaryReader::readS64() {
 	size start = mCursor;
 	mCursor += len;
 
-	s64 tmp1 = mBuffer.at(start + 0) | (mBuffer.at(start + 1) << 8) | (mBuffer.at(start + 2) << 16) | (mBuffer.at(start + 3) << 24);
-	s64 tmp2 = mBuffer.at(start + 4) | (mBuffer.at(start + 5) << 8) | (mBuffer.at(start + 6) << 16) | (mBuffer.at(start + 7) << 24);
-
-	return tmp1 | (tmp2 << 32);
+	s64 out = 0;
+	for (s32 i = 0; i < 8; i++)
+		out |= static_cast<s64>(at(start + i)) << (i * 8);
+	return out;
 }
 
 hk::ValueOrResult<f32> BinaryReader::readF32() {
@@ -101,8 +117,10 @@ hk::ValueOrResult<f32> BinaryReader::readF32() {
 
 	size start = mCursor;
 	mCursor += len;
-	u32 tmp = mBuffer.at(start) | (mBuffer.at(start + 1) << 8) | (mBuffer.at(start + 2) << 16) | (mBuffer.at(start + 3) << 24);
 
+	u32 tmp = 0;
+	for (s32 i = 0; i < 4; i++)
+		tmp |= static_cast<u32>(at(start + i)) << (i * 8);
 	return std::bit_cast<f32>(tmp);
 }
 
@@ -113,18 +131,24 @@ hk::ValueOrResult<f64> BinaryReader::readF64() {
 	size start = mCursor;
 	mCursor += len;
 
-	u64 tmp1 = mBuffer.at(start + 0) | (mBuffer.at(start + 1) << 8) | (mBuffer.at(start + 2) << 16) | (mBuffer.at(start + 3) << 24);
-	u64 tmp2 = mBuffer.at(start + 4) | (mBuffer.at(start + 5) << 8) | (mBuffer.at(start + 6) << 16) | (mBuffer.at(start + 7) << 24);
-
-	u64 tmp = tmp1 | (tmp2 << 32);
-
+	u64 tmp = 0;
+	for (s32 i = 0; i < 8; i++)
+		tmp |= static_cast<u64>(at(start + i)) << (i * 8);
 	return std::bit_cast<f64>(tmp);
 }
 
 hk::ValueOrResult<bool> BinaryReader::readBool() {
 	const size len = sizeof(u8);
 	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
-	return mBuffer.at(mCursor++);
+	return at(mCursor++);
+}
+
+hk::ValueOrResult<QString> BinaryReader::readString(size len) {
+	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	QString out = mBuffer.sliced(mCursor, len);
+
+	mCursor += len;
+	return out;
 }
 
 void BinaryReader::alignUp(size alignment) {

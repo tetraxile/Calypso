@@ -2,28 +2,36 @@
 
 #include <hk/ValueOrResult.h>
 
-ScriptSTAS::ScriptSTAS(QFile& file) : file(file), reader(file) {}
+#include "results.h"
+
+ScriptSTAS::ScriptSTAS(QFile& file) : file(file), reader(file), name(file.filesystemFileName().filename().u16string()) {}
 
 void ScriptSTAS::close() {
 	if (file.isOpen()) file.close();
 }
 
 hk::Result ScriptSTAS::readHeader() {
-	printf("reading header...\n");
-
 	HK_TRY(reader.checkSignature("STAS"));
 
-	u16 formatVersion = HK_TRY(reader.readU16());
-	u16 gameVersion = HK_TRY(reader.readU16());
-	u16 editorVersion = HK_TRY(reader.readU16());
-	u64 titleID = HK_TRY(reader.readU64());
+	header.formatVersion = HK_TRY(reader.readU16());
+	if (header.formatVersion != 0) return ResultUnsupportedVersion();
 
-	u32 commandCount = HK_TRY(reader.readU32());
-	u32 secondsEditing = HK_TRY(reader.readU32());
-	u8 playerCount = HK_TRY(reader.readU8());
+	header.gameVersion = HK_TRY(reader.readU16());
+	if (header.gameVersion != 0) return ResultUnsupportedVersion();
+
+	header.editorVersion = HK_TRY(reader.readU16());
 	reader.alignUp(sizeof(u32));
-	u32 controllerTypes = HK_TRY(reader.readU32());
+	header.titleID = HK_TRY(reader.readU64());
+	if (header.titleID != SMO_TITLE_ID) return ResultInvalidTitleID();
+
+	header.commandCount = HK_TRY(reader.readU32());
+	header.secondsEdited = HK_TRY(reader.readU32());
+	header.playerCount = HK_TRY(reader.readU8());
+	reader.alignUp(sizeof(u32));
+	for (s32 i = 0; i < 4; i++)
+		header.controllerTypes[i] = ControllerType(HK_TRY(reader.readU8()));
 	u16 authorNameLength = HK_TRY(reader.readU16());
+	header.author = HK_TRY(reader.readString(authorNameLength));
 
 	return hk::ResultSuccess();
 }

@@ -18,6 +18,7 @@
 
 #include <hk/types.h>
 
+#include "results.h"
 #include "util.h"
 
 void MainWindow::newConnection() {
@@ -72,7 +73,7 @@ void MainWindow::openFileButton() {
 	mRecentScripts->insertItem(0, fileName);
 	mRecentScripts->setCurrentIndex(0);
 
-	parseScript();
+	if (parseScript().failed()) clearScript();
 }
 
 void MainWindow::openFileRecent() {
@@ -85,18 +86,43 @@ void MainWindow::openFileRecent() {
 	}
 
 	log("opening file: %s", qPrintable(fileName));
-	if (mScript) delete mScript;
+	if (mScript) {
+		delete mScript;
+		mScript = nullptr;
+	}
 	mScript = new ScriptSTAS(file);
 
-	parseScript();
+	if (parseScript().failed()) clearScript();
 }
 
-void MainWindow::parseScript() {
-	mScript->readHeader();
+hk::Result MainWindow::parseScript() {
+	hk::Result r = mScript->readHeader();
+	if (r == ResultInvalidTitleID()) {
+		log("script's title ID must match SMO's! (got: %016lx)", mScript->header.titleID);
+		return hk::ResultFailed();
+	} else if (r == ResultUnsupportedVersion()) {
+		log("only STAS version 0 supported! (got: %d)", mScript->header.formatVersion);
+		return hk::ResultFailed();
+	} else if (r.failed()) {
+		log("error parsing script: %04d-%04d", r.getModule(), r.getDescription());
+		return r;
+	}
 
-	log("script name: %s", qPrintable(mScript->name));
+	mScriptInfo.name->setText(mScript->name);
+	mScriptInfo.author->setText(mScript->header.author);
+	mScriptInfo.commandCount->setText(QString::number(mScript->header.commandCount));
 
 	mScript->close();
+
+	return hk::ResultSuccess();
+}
+
+void MainWindow::clearScript() {
+	mScriptInfo.name->clear();
+	mScriptInfo.author->clear();
+	mScriptInfo.commandCount->clear();
+	delete mScript;
+	mScript = nullptr;
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
