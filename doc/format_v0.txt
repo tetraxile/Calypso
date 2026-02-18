@@ -8,7 +8,7 @@ offset  | size   | note
 0x8     | 2 (+2) | version (editor extras)
 0xC     | 8      | game title id
 --------+--------+-----------------------------------------
-total   | 0x12   |
+total   | 0x14   |
 
 
 SCRIPT HEADER:
