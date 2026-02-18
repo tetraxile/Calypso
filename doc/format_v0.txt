@@ -5,8 +5,8 @@ offset  | size   | note
 0x0     | 4      | magic, "STAS" (SwitchTAS)
 0x4     | 2      | version (file format), 0x0000
 0x6     | 2      | version (game addon)
-0x8     | 2      | version (editor extras)
-0xA     | 8      | game title id
+0x8     | 2 (+2) | version (editor extras)
+0xC     | 8      | game title id
 --------+--------+-----------------------------------------
 total   | 0x12   |
 
