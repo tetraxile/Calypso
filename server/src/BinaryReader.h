@@ -28,6 +28,8 @@ public:
 	hk::Result checkSignature(const QString& expected);
 	void alignUp(size alignment);
 
+	size position() const { return mCursor; }
+
 private:
 	QByteArray mBuffer;
 	size mCursor = 0;

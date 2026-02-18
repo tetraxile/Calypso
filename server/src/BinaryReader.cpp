@@ -52,13 +52,10 @@ hk::ValueOrResult<u64> BinaryReader::readU64() {
 	size start = mCursor;
 	mCursor += len;
 
-	u64 out = 0;
-	for (s32 i = 7; i >= 0; i--) {
-		out |= mBuffer.at(start + i);
-		out <<= 8;
-	}
+	u64 tmp1 = mBuffer.at(start + 0) | (mBuffer.at(start + 1) << 8) | (mBuffer.at(start + 2) << 16) | (mBuffer.at(start + 3) << 24);
+	u64 tmp2 = mBuffer.at(start + 4) | (mBuffer.at(start + 5) << 8) | (mBuffer.at(start + 6) << 16) | (mBuffer.at(start + 7) << 24);
 
-	return out;
+	return tmp1 | (tmp2 << 32);
 }
 
 hk::ValueOrResult<s8> BinaryReader::readS8() {
@@ -92,13 +89,10 @@ hk::ValueOrResult<s64> BinaryReader::readS64() {
 	size start = mCursor;
 	mCursor += len;
 
-	s64 out = 0;
-	for (s32 i = 7; i >= 0; i--) {
-		out |= mBuffer.at(start + i);
-		out <<= 8;
-	}
+	s64 tmp1 = mBuffer.at(start + 0) | (mBuffer.at(start + 1) << 8) | (mBuffer.at(start + 2) << 16) | (mBuffer.at(start + 3) << 24);
+	s64 tmp2 = mBuffer.at(start + 4) | (mBuffer.at(start + 5) << 8) | (mBuffer.at(start + 6) << 16) | (mBuffer.at(start + 7) << 24);
 
-	return out;
+	return tmp1 | (tmp2 << 32);
 }
 
 hk::ValueOrResult<f32> BinaryReader::readF32() {
@@ -119,11 +113,10 @@ hk::ValueOrResult<f64> BinaryReader::readF64() {
 	size start = mCursor;
 	mCursor += len;
 
-	u64 tmp = 0;
-	for (s32 i = 7; i >= 0; i--) {
-		tmp |= mBuffer.at(start + i);
-		tmp <<= 8;
-	}
+	u64 tmp1 = mBuffer.at(start + 0) | (mBuffer.at(start + 1) << 8) | (mBuffer.at(start + 2) << 16) | (mBuffer.at(start + 3) << 24);
+	u64 tmp2 = mBuffer.at(start + 4) | (mBuffer.at(start + 5) << 8) | (mBuffer.at(start + 6) << 16) | (mBuffer.at(start + 7) << 24);
+
+	u64 tmp = tmp1 | (tmp2 << 32);
 
 	return std::bit_cast<f64>(tmp);
 }
