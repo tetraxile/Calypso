@@ -21,38 +21,43 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVE
 
 namespace hk {
 
+template <typename T>
+class ValueOrResult;
+
 /**
  * @brief Value representing the result of an operation.
  *
  * When the value is ResultSuccess(), the operation was successful.
  * Otherwise, a module and description code can be retrieved to determine the error.
  */
-class Result {
-	u32 mValue = 0;
+struct Result {
+	u32 value = 0;
 
 	// BOOOOOOOOOOOORIIIING
 	static constexpr u32 makeResult(int module, int description) { return (module & 0b0111111111) | ((description) & 0b01111111111111) << 9; }
 
-public:
-	constexpr Result() : mValue(0) {}
+	constexpr Result() : value(0) {}
 
-	constexpr Result(u32 value) : mValue(value) {}
+	constexpr Result(u32 value) : value(value) {}
 
-	constexpr Result(int module, int description) : mValue(makeResult(module, description)) {}
+	constexpr Result(int module, int description) : value(makeResult(module, description)) {}
 
-	constexpr u32 getValue() const { return mValue; }
+	constexpr u32 getValue() const { return value; }
 
-	constexpr operator u32() const { return mValue; }
+	constexpr operator u32() const { return value; }
 
 	constexpr operator bool() const { return failed(); }
 
-	constexpr int getModule() const { return mValue & 0b0111111111; }
+	template <typename T>
+	constexpr operator ValueOrResult<T>() const;
 
-	constexpr int getDescription() const { return ((mValue) >> 9) & 0b01111111111111; }
+	constexpr int getModule() const { return value & 0b0111111111; }
 
-	constexpr bool operator==(const Result& rhs) const { return rhs.mValue == mValue; }
+	constexpr int getDescription() const { return ((value) >> 9) & 0b01111111111111; }
 
-	constexpr bool succeeded() const { return mValue == 0; }
+	constexpr bool operator==(const Result& rhs) const { return rhs.value == value; }
+
+	constexpr bool succeeded() const { return value == 0; }
 
 	constexpr bool failed() const { return !succeeded(); }
 };
@@ -111,16 +116,39 @@ hk_alwaysinline bool isResult(Result value) {
 # include "hk/detail/DefaultResults.ih"
 # undef INCLUDE_HK_DETAIL_DEFAULTRESULTS
 
+namespace detail {
+
+template <typename T>
+struct ResultChecker {
+	hk_alwaysinline static constexpr Result check(const T&& value) { return Result(value); }
+};
+
+template <typename T>
+struct ResultChecker<T*> {
+	hk_alwaysinline static constexpr Result check(const T*&& ptr) {
+		if (ptr != nullptr)
+			return hk::ResultSuccess();
+		else
+			return hk::ResultNoValue();
+	}
+};
+} // namespace detail
+
 #endif // INCLUDE_HK_DETAIL_DEFAULTRESULTS
 
 /**
  * @brief Return if Result within expression is unsuccessful.
+ * If expression is pointer, return ResultNoValue() if it is nullptr.
  * Function must return Result.
  */
-#define HK_TRY(RESULT)                                                                                                                                         \
+#define HK_TRY(VALUE)                                                                                                                                          \
 	{                                                                                                                                                          \
-		const ::hk::Result _result_temp = RESULT;                                                                                                              \
+		auto&& _value_temp = VALUE;                                                                                                                            \
+		using _ValueT = std::remove_reference_t<decltype(_value_temp)>;                                                                                        \
+                                                                                                                                                               \
+		const ::hk::Result _result_temp = ::hk::detail::ResultChecker<_ValueT>::check(::forward<_ValueT>(_value_temp));                                        \
 		if (_result_temp.failed()) return _result_temp;                                                                                                        \
+		::move(_value_temp);                                                                                                                                   \
 	}
 
 /**
