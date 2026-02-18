@@ -7,7 +7,7 @@ target_sources(${PROJECT_NAME}
         LogWidget.cpp
         util.cpp
         ScriptSTAS.cpp
-        reader.cpp
+        BinaryReader.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
