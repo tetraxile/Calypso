@@ -8,6 +8,7 @@ target_sources(${PROJECT_NAME}
         util.cpp
         ScriptSTAS.cpp
         BinaryReader.cpp
+        InputDisplayWidget.cpp
 
         hk/diag.cpp
 )

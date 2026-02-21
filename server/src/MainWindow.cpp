@@ -104,10 +104,10 @@ hk::Result MainWindow::parseScript() {
 	if (r == hk::ResultFailed()) {
 		return hk::ResultFailed();
 	} else if (r == ResultEOFReached()) {
-		log("unexpected EOF while parsing script!");
+		mLogWidget->log("unexpected EOF while parsing script!");
 		return hk::ResultFailed();
 	} else if (r.failed()) {
-		log("error parsing script header: %04d-%04d", r.getModule(), r.getDescription());
+		mLogWidget->log("error parsing script header: %04d-%04d", r.getModule(), r.getDescription());
 		return r;
 	}
 
@@ -115,10 +115,10 @@ hk::Result MainWindow::parseScript() {
 	if (r == hk::ResultFailed()) {
 		return hk::ResultFailed();
 	} else if (r == ResultEOFReached()) {
-		log("unexpected EOF while parsing script!");
+		mLogWidget->log("unexpected EOF while parsing script!");
 		return hk::ResultFailed();
 	} else if (r.failed()) {
-		log("error parsing script: %04d-%04d", r.getModule(), r.getDescription());
+		mLogWidget->log("error parsing script: %04d-%04d", r.getModule(), r.getDescription());
 		return r;
 	}
 
@@ -126,7 +126,7 @@ hk::Result MainWindow::parseScript() {
 	if (r == hk::ResultFailed()) {
 		return hk::ResultFailed();
 	} else if (r.failed()) {
-		log("error parsing script metadata: %04d-%04d", r.getModule(), r.getDescription());
+		mLogWidget->log("error parsing script metadata: %04d-%04d", r.getModule(), r.getDescription());
 		return r;
 	}
 
@@ -167,6 +167,10 @@ void MainWindow::frameAdvance() {
 	HK_ASSERT(mScript != nullptr);
 	mLogWidget->log("advancing to next frame");
 
+	getNextFrame();
+}
+
+void MainWindow::getNextFrame() {
 	hk::ValueOrResult<ScriptSTAS::Packet&> packetR = mScript->getNextFrame();
 	if (packetR == ResultEndOfScriptReached()) {
 		clearScript();
@@ -179,6 +183,13 @@ void MainWindow::frameAdvance() {
 	}
 
 	ScriptSTAS::Packet& packet = packetR;
+
+	// mLogWidget->log("%016lx\n", packet.frame.player1.buttons);
+
+	auto& player1 = packet.frame.player1;
+	mInputDisplayWidget->setInputs(player1.leftStick, player1.rightStick, player1.buttons);
+
+	mInputDisplayWidget->update();
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -350,8 +361,8 @@ void MainWindow::setupLog() {
 }
 
 void MainWindow::setupInputDisplay() {
-	QFrame* inputDisplayWidget = new QFrame;
-	addSection(inputDisplayWidget, tr("Input display"), mBottomRow);
+	mInputDisplayWidget = new InputDisplayWidget;
+	addSection(mInputDisplayWidget, tr("Input display"), mBottomRow);
 }
 
 void MainWindow::setupGameInfo() {

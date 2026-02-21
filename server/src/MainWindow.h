@@ -15,6 +15,7 @@
 
 #include <hk/types.h>
 
+#include "InputDisplayWidget.h"
 #include "LogWidget.h"
 #include "ScriptSTAS.h"
 
@@ -27,20 +28,6 @@ public:
 
 	void setupUi();
 	void retranslateUi();
-
-#ifdef __GNUC__
-	[[gnu::format(printf, 2, 3)]]
-#endif
-	void log(const char* fmt, ...) {
-		va_list args;
-		va_start(args, fmt);
-
-		QString out = QString::vasprintf(fmt, args);
-
-		mLogWidget->appendLine(out);
-
-		va_end(args);
-	}
 
 private slots:
 	void newConnection();
@@ -67,6 +54,7 @@ private:
 	void openFile(const QString& fileName, bool isSetRecent);
 	hk::Result parseScript();
 	void clearScript();
+	void getNextFrame();
 
 	static const s32 RECENT_SCRIPTS_NUM = 10;
 	static const s32 PORT = 8171;
@@ -77,6 +65,8 @@ private:
 	QMenuBar* mMenuBar;
 	QStatusBar* mStatusBar;
 	QComboBox* mRecentScripts;
+
+	InputDisplayWidget* mInputDisplayWidget;
 
 	struct {
 		QPushButton* playButton;
