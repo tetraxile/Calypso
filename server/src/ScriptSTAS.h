@@ -33,6 +33,7 @@ private:
 		cCommandType_Invalid = 0xffff
 	};
 
+public:
 	struct Packet {
 		struct Controller {
 			u64 flags;
@@ -60,12 +61,12 @@ private:
 		Frame frame;
 	};
 
-public:
 	ScriptSTAS(QFile& file, LogWidget& logWidget);
 
 	hk::Result readHeader();
+	hk::Result readMetadata();
 	hk::Result verify();
-	hk::ValueOrResult<Packet> getNextFrame();
+	hk::ValueOrResult<Packet&> getNextFrame();
 	void close();
 
 	struct {
@@ -82,6 +83,8 @@ private:
 	LogWidget& mLogWidget;
 
 	u32 mCommandIdx = 0;
+	u32 mFrameIdx = 0;
+	u32 mNextFrameIdx = 0;
 	Packet mCurPacket;
 
 	struct {

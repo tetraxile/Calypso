@@ -15,6 +15,8 @@
 #include <QTableWidget>
 #include <QVector3D>
 
+#include <hk/ValueOrResult.h>
+#include <hk/diag/diag.h>
 #include <hk/types.h>
 
 #include "results.h"
@@ -120,6 +122,14 @@ hk::Result MainWindow::parseScript() {
 		return r;
 	}
 
+	r = mScript->readMetadata();
+	if (r == hk::ResultFailed()) {
+		return hk::ResultFailed();
+	} else if (r.failed()) {
+		log("error parsing script metadata: %04d-%04d", r.getModule(), r.getDescription());
+		return r;
+	}
+
 	mScriptInfo.name->setText(mScript->mInfo.name);
 	mScriptInfo.author->setText(mScript->mInfo.author);
 	mScriptInfo.commandCount->setText(QString::number(mScript->mInfo.frameCount));
@@ -135,30 +145,40 @@ void MainWindow::clearScript() {
 	mScriptInfo.commandCount->clear();
 	delete mScript;
 	mScript = nullptr;
+	mControls.disable();
 }
 
 void MainWindow::runScript() {
-	if (!mScript) return;
-
+	HK_ASSERT(mScript != nullptr);
 	mLogWidget->log("running script...");
 }
 
 void MainWindow::stopScript() {
-	if (!mScript) return;
-
+	HK_ASSERT(mScript != nullptr);
 	mLogWidget->log("stopped script");
 }
 
 void MainWindow::pauseGame() {
-	if (!mScript) return;
-
+	HK_ASSERT(mScript != nullptr);
 	mLogWidget->log("pausing game");
 }
 
 void MainWindow::frameAdvance() {
-	if (!mScript) return;
-
+	HK_ASSERT(mScript != nullptr);
 	mLogWidget->log("advancing to next frame");
+
+	hk::ValueOrResult<ScriptSTAS::Packet&> packetR = mScript->getNextFrame();
+	if (packetR == ResultEndOfScriptReached()) {
+		clearScript();
+		return;
+	} else if (!packetR.hasValue()) {
+		hk::Result r = packetR;
+		mLogWidget->log("error getting frame: %04d-%04d", r.getModule(), r.getDescription());
+		clearScript();
+		return;
+	}
+
+	ScriptSTAS::Packet& packet = packetR;
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {

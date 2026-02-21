@@ -4,7 +4,7 @@
 
 #include "results.h"
 
-ScriptSTAS::ScriptSTAS(QFile& file, LogWidget& logWidget) : mFile(file), mReader(file), mLogWidget(logWidget) {
+ScriptSTAS::ScriptSTAS(QFile& file, LogWidget& logWidget) : mFile(file), mReader(file, file.size()), mLogWidget(logWidget) {
 	mInfo.name.assign(file.filesystemFileName().filename().u16string());
 }
 
@@ -58,15 +58,40 @@ hk::Result ScriptSTAS::readHeader() {
 	return hk::ResultSuccess();
 }
 
+hk::Result ScriptSTAS::readMetadata() {
+	CommandType cmdType = cCommandType_Invalid;
+	do {
+		HK_TRY(tryReadCommand(cmdType));
+	} while (cmdType != cCommandType_Frame);
+
+	return hk::ResultSuccess();
+}
+
+hk::ValueOrResult<ScriptSTAS::Packet&> ScriptSTAS::getNextFrame() {
+	if (mFrameIdx == mNextFrameIdx) {
+		CommandType cmdType = cCommandType_Invalid;
+		do {
+			HK_TRY(tryReadCommand(cmdType));
+		} while (cmdType != cCommandType_Frame);
+	}
+
+	mCurPacket.frame.frameIdx = mFrameIdx++;
+	return mCurPacket;
+}
+
 hk::Result ScriptSTAS::tryReadCommand(CommandType& cmdType) {
 	HK_ASSERT(mHeader.isValid);
+
+	if (mCommandIdx > mHeader.commandCount - 1) {
+		return ResultEndOfScriptReached();
+	}
 
 	cmdType = CommandType(HK_TRY(mReader.readU16()));
 	u16 size = HK_TRY(mReader.readU16());
 
 	switch (cmdType) {
 	case cCommandType_Frame: {
-		mCurPacket.frame.frameIdx = HK_TRY(mReader.readU32());
+		mNextFrameIdx = HK_TRY(mReader.readU32());
 		break;
 	}
 	case cCommandType_Controller: {
@@ -195,6 +220,7 @@ hk::Result ScriptSTAS::verify() {
 	}
 
 	mInfo.frameCount = lastFrame + 1;
+	mReader.seek(mHeader.endOffset);
 
 	return hk::ResultSuccess();
 }
