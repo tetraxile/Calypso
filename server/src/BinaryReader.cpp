@@ -10,7 +10,7 @@ hk::Result BinaryReader::checkSignature(const QString& expected) {
 	char buffer[len + 1];
 	buffer[len] = '\0';
 
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 
 	for (s32 i = 0; i < len; i++)
 		buffer[i] = mBuffer.at(mCursor++);
@@ -23,13 +23,13 @@ hk::Result BinaryReader::checkSignature(const QString& expected) {
 
 hk::ValueOrResult<u8> BinaryReader::readU8() {
 	const size len = sizeof(u8);
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 	return at(mCursor++);
 }
 
 hk::ValueOrResult<u16> BinaryReader::readU16() {
 	const size len = sizeof(u16);
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 
 	size start = mCursor;
 	mCursor += len;
@@ -42,7 +42,7 @@ hk::ValueOrResult<u16> BinaryReader::readU16() {
 
 hk::ValueOrResult<u32> BinaryReader::readU32() {
 	const size len = sizeof(u32);
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 
 	size start = mCursor;
 	mCursor += len;
@@ -55,7 +55,7 @@ hk::ValueOrResult<u32> BinaryReader::readU32() {
 
 hk::ValueOrResult<u64> BinaryReader::readU64() {
 	const size len = sizeof(u64);
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 
 	size start = mCursor;
 	mCursor += len;
@@ -68,13 +68,13 @@ hk::ValueOrResult<u64> BinaryReader::readU64() {
 
 hk::ValueOrResult<s8> BinaryReader::readS8() {
 	const size len = sizeof(u8);
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 	return at(mCursor++);
 }
 
 hk::ValueOrResult<s16> BinaryReader::readS16() {
 	const size len = sizeof(u16);
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 
 	size start = mCursor;
 	mCursor += len;
@@ -87,7 +87,7 @@ hk::ValueOrResult<s16> BinaryReader::readS16() {
 
 hk::ValueOrResult<s32> BinaryReader::readS32() {
 	const size len = sizeof(u32);
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 
 	size start = mCursor;
 	mCursor += len;
@@ -100,7 +100,7 @@ hk::ValueOrResult<s32> BinaryReader::readS32() {
 
 hk::ValueOrResult<s64> BinaryReader::readS64() {
 	const size len = sizeof(u64);
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 
 	size start = mCursor;
 	mCursor += len;
@@ -113,7 +113,7 @@ hk::ValueOrResult<s64> BinaryReader::readS64() {
 
 hk::ValueOrResult<f32> BinaryReader::readF32() {
 	const size len = sizeof(u32);
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 
 	size start = mCursor;
 	mCursor += len;
@@ -126,7 +126,7 @@ hk::ValueOrResult<f32> BinaryReader::readF32() {
 
 hk::ValueOrResult<f64> BinaryReader::readF64() {
 	const size len = sizeof(u64);
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 
 	size start = mCursor;
 	mCursor += len;
@@ -139,12 +139,12 @@ hk::ValueOrResult<f64> BinaryReader::readF64() {
 
 hk::ValueOrResult<bool> BinaryReader::readBool() {
 	const size len = sizeof(u8);
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 	return at(mCursor++);
 }
 
 hk::ValueOrResult<QString> BinaryReader::readString(size len) {
-	if (mCursor + len >= mBuffer.length()) return ResultEOFReached();
+	if (mCursor + len > mBuffer.length()) return ResultEOFReached();
 	QString out = mBuffer.sliced(mCursor, len);
 
 	mCursor += len;

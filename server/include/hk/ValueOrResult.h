@@ -135,7 +135,7 @@ class ValueOrResult<T&> {
 	Result mResult = ResultSuccess();
 	T* mValueReference = nullptr;
 
-	constexpr T& get() {
+	constexpr T& get() const {
 		HK_ABORT_UNLESS(
 			hasValue(), "hk::ValueOrResult::get(): No value (%04d-%04d/0x%x)", mResult.getModule() + 2000, mResult.getDescription(), mResult.getValue()
 		);

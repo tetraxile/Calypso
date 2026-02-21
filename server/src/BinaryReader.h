@@ -9,7 +9,7 @@
 
 class BinaryReader {
 public:
-	BinaryReader(QFile& file) : mBuffer(0x100000, 0) {
+	BinaryReader(QFile& file, size size) : mBuffer(size, 0) {
 		QDataStream in(&file);
 		in.readRawData(mBuffer.data(), mBuffer.size());
 	}
