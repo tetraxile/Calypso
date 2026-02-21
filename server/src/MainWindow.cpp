@@ -10,7 +10,6 @@
 #include <QMenu>
 #include <QNetworkDatagram>
 #include <QPlainTextEdit>
-#include <QPushButton>
 #include <QScrollBar>
 #include <QSizePolicy>
 #include <QTableWidget>
@@ -30,7 +29,7 @@ void MainWindow::newConnection() {
 		QHostAddress addrIPv4 = QHostAddress(addrIPv6.toIPv4Address(&isV4));
 		QString addrStr = isV4 ? addrIPv4.toString() : addrIPv6.toString();
 		u16 port = mTCPSocket->peerPort();
-		log("connection received from %s:%d", qPrintable(addrStr), port);
+		mLogWidget->log("connection received from %s:%d", qPrintable(addrStr), port);
 	}
 
 	connect(mTCPSocket, &QTcpSocket::disconnected, mTCPSocket, &QTcpSocket::deleteLater);
@@ -39,20 +38,20 @@ void MainWindow::newConnection() {
 }
 
 void MainWindow::disconnected() {
-	log("client disconnected");
+	mLogWidget->log("client disconnected");
 }
 
 void MainWindow::receiveTCPData() {
 	QTextStream in(mTCPSocket);
-	log("[switch] %s", qPrintable(in.readAll()));
+	mLogWidget->log("[switch] %s", qPrintable(in.readAll()));
 }
 
 void MainWindow::receiveUDPData() {
 	while (mUDPSocket->hasPendingDatagrams()) {
 		QNetworkDatagram datagram = mUDPSocket->receiveDatagram();
 		QByteArray data = datagram.data();
-		log("[UDP] received %lld bytes", data.size());
-		log("[UDP] %s", data.data());
+		mLogWidget->log("[UDP] received %lld bytes", data.size());
+		mLogWidget->log("[UDP] %s", data.data());
 	}
 }
 
@@ -60,57 +59,70 @@ void MainWindow::openFileButton() {
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Select a script"), "", tr("STAS scripts (*.stas)"));
 	if (fileName.isEmpty()) return;
 
-	QFile file(fileName);
-	if (!file.open(QIODevice::ReadOnly)) {
-		log("could not open file: %s", qPrintable(fileName));
-		return;
-	}
-
-	log("opening file: %s", qPrintable(fileName));
-	if (mScript) delete mScript;
-	mScript = new ScriptSTAS(file);
-
-	mRecentScripts->insertItem(0, fileName);
-	mRecentScripts->setCurrentIndex(0);
-
-	if (parseScript().failed()) clearScript();
+	openFile(fileName, true);
 }
 
 void MainWindow::openFileRecent() {
 	QString fileName = mRecentScripts->currentText();
 
+	openFile(fileName, false);
+}
+
+void MainWindow::openFile(const QString& fileName, bool isSetRecent) {
+	mControls.disable();
+
 	QFile file(fileName);
 	if (!file.open(QIODevice::ReadOnly)) {
-		log("could not open file: %s", qPrintable(fileName));
+		mLogWidget->log("could not open file: %s", qPrintable(fileName));
 		return;
 	}
 
-	log("opening file: %s", qPrintable(fileName));
+	mLogWidget->log("opening file: %s", qPrintable(fileName));
 	if (mScript) {
 		delete mScript;
 		mScript = nullptr;
 	}
-	mScript = new ScriptSTAS(file);
+	mScript = new ScriptSTAS(file, *mLogWidget);
 
-	if (parseScript().failed()) clearScript();
+	if (isSetRecent) {
+		mRecentScripts->insertItem(0, fileName);
+		mRecentScripts->setCurrentIndex(0);
+	}
+
+	if (parseScript().failed()) {
+		clearScript();
+		return;
+	}
+
+	mControls.enable();
 }
 
 hk::Result MainWindow::parseScript() {
 	hk::Result r = mScript->readHeader();
-	if (r == ResultInvalidTitleID()) {
-		log("script's title ID must match SMO's! (got: %016lx)", mScript->header.titleID);
+	if (r == hk::ResultFailed()) {
 		return hk::ResultFailed();
-	} else if (r == ResultUnsupportedVersion()) {
-		log("only STAS version 0 supported! (got: %d)", mScript->header.formatVersion);
+	} else if (r == ResultEOFReached()) {
+		log("unexpected EOF while parsing script!");
+		return hk::ResultFailed();
+	} else if (r.failed()) {
+		log("error parsing script header: %04d-%04d", r.getModule(), r.getDescription());
+		return r;
+	}
+
+	r = mScript->verify();
+	if (r == hk::ResultFailed()) {
+		return hk::ResultFailed();
+	} else if (r == ResultEOFReached()) {
+		log("unexpected EOF while parsing script!");
 		return hk::ResultFailed();
 	} else if (r.failed()) {
 		log("error parsing script: %04d-%04d", r.getModule(), r.getDescription());
 		return r;
 	}
 
-	mScriptInfo.name->setText(mScript->name);
-	mScriptInfo.author->setText(mScript->header.author);
-	mScriptInfo.commandCount->setText(QString::number(mScript->header.commandCount));
+	mScriptInfo.name->setText(mScript->mInfo.name);
+	mScriptInfo.author->setText(mScript->mInfo.author);
+	mScriptInfo.commandCount->setText(QString::number(mScript->mInfo.frameCount));
 
 	mScript->close();
 
@@ -125,18 +137,42 @@ void MainWindow::clearScript() {
 	mScript = nullptr;
 }
 
+void MainWindow::runScript() {
+	if (!mScript) return;
+
+	mLogWidget->log("running script...");
+}
+
+void MainWindow::stopScript() {
+	if (!mScript) return;
+
+	mLogWidget->log("stopped script");
+}
+
+void MainWindow::pauseGame() {
+	if (!mScript) return;
+
+	mLogWidget->log("pausing game");
+}
+
+void MainWindow::frameAdvance() {
+	if (!mScript) return;
+
+	mLogWidget->log("advancing to next frame");
+}
+
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 	setupUi();
 
 	mServer = new QTcpServer(this);
 	mServer->listen(QHostAddress::Any, PORT);
 	connect(mServer, &QTcpServer::newConnection, this, &MainWindow::newConnection);
-	log("listening for TCP connection on port %d...", PORT);
+	mLogWidget->log("listening for TCP connection on port %d...", PORT);
 
 	mUDPSocket = new QUdpSocket(this);
 	mUDPSocket->bind(PORT);
 	connect(mUDPSocket, &QUdpSocket::readyRead, this, &MainWindow::receiveUDPData);
-	log("listening for UDP packets on port %d...", PORT);
+	mLogWidget->log("listening for UDP packets on port %d...", PORT);
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
@@ -236,25 +272,29 @@ void MainWindow::setupControls() {
 		QHBoxLayout* row = new QHBoxLayout;
 		controlsLayout->addLayout(row);
 
-		QPushButton* playButton = new QPushButton(tr("Run script"));
-		playButton->setDisabled(true);
-		row->addWidget(playButton);
+		mControls.playButton = new QPushButton(tr("Run script"));
+		mControls.playButton->setDisabled(true);
+		connect(mControls.playButton, &QPushButton::clicked, this, &MainWindow::runScript);
+		row->addWidget(mControls.playButton);
 
-		QPushButton* stopButton = new QPushButton(tr("Stop script"));
-		stopButton->setDisabled(true);
-		row->addWidget(stopButton);
+		mControls.stopButton = new QPushButton(tr("Stop script"));
+		mControls.stopButton->setDisabled(true);
+		connect(mControls.stopButton, &QPushButton::clicked, this, &MainWindow::stopScript);
+		row->addWidget(mControls.stopButton);
 	}
 	{
 		QHBoxLayout* row = new QHBoxLayout;
 		controlsLayout->addLayout(row);
 
-		QPushButton* pauseButton = new QPushButton(tr("Toggle game pause"));
-		pauseButton->setDisabled(true);
-		row->addWidget(pauseButton);
+		mControls.pauseButton = new QPushButton(tr("Toggle game pause"));
+		mControls.pauseButton->setDisabled(true);
+		connect(mControls.pauseButton, &QPushButton::clicked, this, &MainWindow::pauseGame);
+		row->addWidget(mControls.pauseButton);
 
-		QPushButton* frameAdvanceButton = new QPushButton(tr("Frame advance"));
-		frameAdvanceButton->setDisabled(true);
-		row->addWidget(frameAdvanceButton);
+		mControls.frameAdvanceButton = new QPushButton(tr("Frame advance"));
+		mControls.frameAdvanceButton->setDisabled(true);
+		connect(mControls.frameAdvanceButton, &QPushButton::clicked, this, &MainWindow::frameAdvance);
+		row->addWidget(mControls.frameAdvanceButton);
 	}
 	{
 		QFormLayout* form = new QFormLayout;

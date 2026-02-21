@@ -6,6 +6,7 @@
 #include <QLineEdit>
 #include <QMainWindow>
 #include <QMenuBar>
+#include <QPushButton>
 #include <QStatusBar>
 #include <QTableWidget>
 #include <QTcpServer>
@@ -48,6 +49,10 @@ private slots:
 	void receiveUDPData();
 	void openFileButton();
 	void openFileRecent();
+	void runScript();
+	void stopScript();
+	void pauseGame();
+	void frameAdvance();
 
 private:
 	void closeEvent(QCloseEvent* event) override;
@@ -58,6 +63,8 @@ private:
 	void setupInputDisplay();
 	void setupGameInfo();
 	void addSection(QFrame* section, const QString& name, QHBoxLayout* row);
+
+	void openFile(const QString& fileName, bool isSetRecent);
 	hk::Result parseScript();
 	void clearScript();
 
@@ -70,6 +77,27 @@ private:
 	QMenuBar* mMenuBar;
 	QStatusBar* mStatusBar;
 	QComboBox* mRecentScripts;
+
+	struct {
+		QPushButton* playButton;
+		QPushButton* stopButton;
+		QPushButton* pauseButton;
+		QPushButton* frameAdvanceButton;
+
+		void enable() {
+			playButton->setEnabled(true);
+			stopButton->setEnabled(true);
+			pauseButton->setEnabled(true);
+			frameAdvanceButton->setEnabled(true);
+		}
+
+		void disable() {
+			playButton->setEnabled(false);
+			stopButton->setEnabled(false);
+			pauseButton->setEnabled(false);
+			frameAdvanceButton->setEnabled(false);
+		}
+	} mControls;
 
 	struct {
 		QLineEdit* name;
