@@ -151,6 +151,32 @@ hk::ValueOrResult<QString> BinaryReader::readString(size len) {
 	return out;
 }
 
+hk::ValueOrResult<hk::util::Vector2i> BinaryReader::readVec2i() {
+	s32 x = HK_TRY(readS32());
+	s32 y = HK_TRY(readS32());
+	return hk::util::Vector2i(x, y);
+}
+
+hk::ValueOrResult<hk::util::Vector2f> BinaryReader::readVec2f() {
+	f32 x = HK_TRY(readF32());
+	f32 y = HK_TRY(readF32());
+	return hk::util::Vector2f(x, y);
+}
+
+hk::ValueOrResult<hk::util::Vector3i> BinaryReader::readVec3i() {
+	s32 x = HK_TRY(readS32());
+	s32 y = HK_TRY(readS32());
+	s32 z = HK_TRY(readS32());
+	return hk::util::Vector3i(x, y, z);
+}
+
+hk::ValueOrResult<hk::util::Vector3f> BinaryReader::readVec3f() {
+	f32 x = HK_TRY(readF32());
+	f32 y = HK_TRY(readF32());
+	f32 z = HK_TRY(readF32());
+	return hk::util::Vector3f(x, y, z);
+}
+
 void BinaryReader::alignUp(size alignment) {
 	mCursor = hk::alignUp(mCursor, alignment);
 }
