@@ -33,6 +33,13 @@ private:
 		cCommandType_Invalid = 0xffff
 	};
 
+	enum class State {
+		Invalid,
+		Uninitialised,
+		ValidHeader,
+		Closed,
+	};
+
 public:
 	struct Packet {
 		struct Controller {
@@ -54,7 +61,7 @@ public:
 			u64 amiibo;
 		};
 
-		char signature[4];
+		char signature[4] = { 'C', 'A', 'L', 'Y' };
 		u8 version = 0;
 		u8 type = 0;
 		u16 size = 0x8 + sizeof(Frame);
@@ -86,6 +93,7 @@ private:
 	u32 mFrameIdx = 0;
 	u32 mNextFrameIdx = 0;
 	Packet mCurPacket;
+	State mState = State::Uninitialised;
 
 	struct {
 		u64 titleID = 0;
@@ -93,7 +101,6 @@ private:
 		u16 gameVersion = 0;
 		u16 editorVersion = 0;
 		u8 playerCount = 0;
-		bool isValid = false;
 		u32 commandCount = 0;
 		u32 secondsEdited = 0;
 		ControllerType controllerTypes[8] = {};

@@ -22,41 +22,6 @@
 #include "results.h"
 #include "util.h"
 
-void MainWindow::newConnection() {
-	mTCPSocket = mServer->nextPendingConnection();
-
-	{
-		bool isV4 = false;
-		QHostAddress addrIPv6 = mTCPSocket->peerAddress();
-		QHostAddress addrIPv4 = QHostAddress(addrIPv6.toIPv4Address(&isV4));
-		QString addrStr = isV4 ? addrIPv4.toString() : addrIPv6.toString();
-		u16 port = mTCPSocket->peerPort();
-		mLogWidget->log("connection received from %s:%d", qPrintable(addrStr), port);
-	}
-
-	connect(mTCPSocket, &QTcpSocket::disconnected, mTCPSocket, &QTcpSocket::deleteLater);
-	connect(mTCPSocket, &QTcpSocket::disconnected, this, &MainWindow::disconnected);
-	connect(mTCPSocket, &QTcpSocket::readyRead, this, &MainWindow::receiveTCPData);
-}
-
-void MainWindow::disconnected() {
-	mLogWidget->log("client disconnected");
-}
-
-void MainWindow::receiveTCPData() {
-	QTextStream in(mTCPSocket);
-	mLogWidget->log("[switch] %s", qPrintable(in.readAll()));
-}
-
-void MainWindow::receiveUDPData() {
-	while (mUDPSocket->hasPendingDatagrams()) {
-		QNetworkDatagram datagram = mUDPSocket->receiveDatagram();
-		QByteArray data = datagram.data();
-		mLogWidget->log("[UDP] received %lld bytes", data.size());
-		mLogWidget->log("[UDP] %s", data.data());
-	}
-}
-
 void MainWindow::openFileButton() {
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Select a script"), "", tr("STAS scripts (*.stas)"));
 	if (fileName.isEmpty()) return;
@@ -151,6 +116,8 @@ void MainWindow::clearScript() {
 void MainWindow::runScript() {
 	HK_ASSERT(mScript != nullptr);
 	mLogWidget->log("running script...");
+
+	mServer->log("test");
 }
 
 void MainWindow::stopScript() {
@@ -184,8 +151,6 @@ void MainWindow::getNextFrame() {
 
 	ScriptSTAS::Packet& packet = packetR;
 
-	// mLogWidget->log("%016lx\n", packet.frame.player1.buttons);
-
 	auto& player1 = packet.frame.player1;
 	mInputDisplayWidget->setInputs(player1.leftStick, player1.rightStick, player1.buttons);
 
@@ -195,19 +160,10 @@ void MainWindow::getNextFrame() {
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 	setupUi();
 
-	mServer = new QTcpServer(this);
-	mServer->listen(QHostAddress::Any, PORT);
-	connect(mServer, &QTcpServer::newConnection, this, &MainWindow::newConnection);
-	mLogWidget->log("listening for TCP connection on port %d...", PORT);
-
-	mUDPSocket = new QUdpSocket(this);
-	mUDPSocket->bind(PORT);
-	connect(mUDPSocket, &QUdpSocket::readyRead, this, &MainWindow::receiveUDPData);
-	mLogWidget->log("listening for UDP packets on port %d...", PORT);
+	mServer = new Server(*mLogWidget);
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
-	if (mTCPSocket) mTCPSocket->close();
 	mServer->close();
 
 	if (mScript) mScript->close();
@@ -215,9 +171,7 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 	event->accept();
 }
 
-MainWindow::~MainWindow() {
-	// delete mViewport;
-}
+MainWindow::~MainWindow() {}
 
 void MainWindow::setupUi() {
 	if (objectName().isEmpty()) setObjectName("MainWindow");

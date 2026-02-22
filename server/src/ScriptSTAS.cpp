@@ -9,11 +9,17 @@ ScriptSTAS::ScriptSTAS(QFile& file, LogWidget& logWidget) : mFile(file), mReader
 }
 
 void ScriptSTAS::close() {
+	if (mState == State::Closed) return;
+
 	if (mFile.isOpen()) mFile.close();
+
+	mState = State::Closed;
 }
 
 hk::Result ScriptSTAS::readHeader() {
-	HK_ASSERT(!mHeader.isValid);
+	HK_ASSERT(mState != State::ValidHeader);
+
+	mState = State::Invalid;
 
 	HK_TRY(mReader.checkSignature("STAS"));
 
@@ -52,8 +58,8 @@ hk::Result ScriptSTAS::readHeader() {
 	mInfo.author = HK_TRY(mReader.readString(authorNameLength));
 	mReader.alignUp(4);
 
-	mHeader.isValid = true;
 	mHeader.endOffset = mReader.position();
+	mState = State::ValidHeader;
 
 	return hk::ResultSuccess();
 }
@@ -80,7 +86,7 @@ hk::ValueOrResult<ScriptSTAS::Packet&> ScriptSTAS::getNextFrame() {
 }
 
 hk::Result ScriptSTAS::tryReadCommand(CommandType& cmdType) {
-	HK_ASSERT(mHeader.isValid);
+	HK_ASSERT(mState == State::ValidHeader);
 
 	if (mCommandIdx > mHeader.commandCount - 1) {
 		return ResultEndOfScriptReached();
@@ -132,7 +138,7 @@ hk::Result ScriptSTAS::tryReadCommand(CommandType& cmdType) {
 }
 
 hk::Result ScriptSTAS::verify() {
-	HK_ASSERT(mHeader.isValid);
+	HK_ASSERT(mState == State::ValidHeader);
 
 	mReader.seek(mHeader.endOffset);
 

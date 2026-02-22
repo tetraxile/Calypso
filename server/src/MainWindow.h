@@ -18,6 +18,7 @@
 #include "InputDisplayWidget.h"
 #include "LogWidget.h"
 #include "ScriptSTAS.h"
+#include "Server.h"
 
 class MainWindow : public QMainWindow {
 	Q_OBJECT
@@ -30,10 +31,6 @@ public:
 	void retranslateUi();
 
 private slots:
-	void newConnection();
-	void disconnected();
-	void receiveTCPData();
-	void receiveUDPData();
 	void openFileButton();
 	void openFileRecent();
 	void runScript();
@@ -57,7 +54,6 @@ private:
 	void getNextFrame();
 
 	static const s32 RECENT_SCRIPTS_NUM = 10;
-	static const s32 PORT = 8171;
 
 	LogWidget* mLogWidget;
 	QHBoxLayout* mBottomRow;
@@ -100,8 +96,6 @@ private:
 		QTableWidgetItem* playerPos;
 	} mGameInfo;
 
-	QTcpServer* mServer = nullptr;
-	QTcpSocket* mTCPSocket = nullptr;
-	QUdpSocket* mUDPSocket = nullptr;
+	Server* mServer;
 	ScriptSTAS* mScript = nullptr;
 };
