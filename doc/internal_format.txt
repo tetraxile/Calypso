@@ -1,0 +1,33 @@
+Header
+offset  | size   | note
+--------+--------+-------------------------------------
+0x0     | 0x4    | char[4] 'CALY'
+0x4     | 0x1    | u8 version
+0x5     | 0x1    | u8 packet type (0: FRAME, 1: SAVESTATE, 2: COMMAND)
+0x6     | 0x2    | u16 packet size
+0x8     |        | packet body
+
+
+Frame 
+offset  | size   | note
+--------+--------+-------------------------------------
+0x0     | 0x4    | u32 flags (0: PLAYER_1, 1: PLAYER_2, 2: AMIIBO)
+0x4     | 0x4    | u32 frame idx
+0x8     | 0x50   | Controller player 1
+0x58    | 0x50   | Controller player 2
+0xa8    | 0x8    | u64/ModelInfo? amiibo
+0xb0    |        | 
+
+
+Controller
+offset  | size   | note
+--------+--------+-------------------------------------
+0x0     | 0x8    | u64 flags (0: MOTION_LEFT, 1: MOTION_RIGHT)
+0x8     | 0x8    | u64 buttons
+0x10    | 0x8    | Vector2i left stick
+0x18    | 0x8    | Vector2i right stick
+0x20    | 0xc    | Vector3f accelerometer left
+0x2c    | 0xc    | Vector3f gyro left
+0x38    | 0xc    | Vector3f accelerometer right
+0x44    | 0xc    | Vector3f gyro right
+0x50    |        | 
