@@ -4,6 +4,8 @@ compile_commands.json
 .vscode/
 tmp/
 scripts/
+.direnv/
+target/
 
 client/lib/std
 client/build
