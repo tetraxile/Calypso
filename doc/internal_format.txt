@@ -3,8 +3,8 @@ offset  | size   | note
 --------+--------+-------------------------------------
 0x0     | 0x4    | char[4] 'CALY'
 0x4     | 0x1    | u8 version
-0x5     | 0x1    | u8 packet type (0: FRAME, 1: SAVESTATE, 2: COMMAND)
-0x6     | 0x2    | u16 packet size
+0x5     | 0x1    | u8 packet type (1: FRAME, 2: LOG, 3: SAVESTATE, 4: COMMAND)
+0x6     | 0x2    | u16 packet body size (excluding header)
 0x8     |        | packet body
 
 

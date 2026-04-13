@@ -38,6 +38,7 @@ void Server::init(sead::Heap* heap, const sead::SafeString& serverIP) {
 
 	al::FunctorV0M functor(this, &Server::threadRecv);
 	mRecvThread = new (mHeap) al::AsyncFunctorThread("Recv Thread", functor, 0, 0x20000, {});
+	mRecvThread->start();
 
 	disableSocketInit.installAtSym<"_ZN2nn6socket10InitializeEPvmmi">();
 
@@ -51,7 +52,13 @@ s32 Server::recvAll(u8* recvBuf, s32 remaining) {
 	s32 totalReceived = 0;
 	do {
 		s32 recvLen = nn::socket::Recv(mTCPSockFd, recvBuf, remaining, 0);
-		if (recvLen <= 0) return recvLen;
+		if (recvLen < 0) {
+			Menu::log("socket error: %s", strerror(nn::socket::GetLastErrno()));
+			return recvLen;
+		} else if (recvLen == 0) {
+			Menu::log("received 0 bytes");
+			return recvLen;
+		}
 		remaining -= recvLen;
 		recvBuf += recvLen;
 		totalReceived += recvLen;
@@ -64,63 +71,44 @@ void Server::threadRecv() {
 	while (true) {
 		hk::Result r = handlePacket();
 		if (r.failed()) disconnect();
-		nn::os::SleepThread(nn::TimeSpan::FromSeconds(1));
+		nn::os::SleepThread(nn::TimeSpan::FromNanoSeconds(1_sec / 60));
 	}
 }
 
 hk::Result Server::handlePacket() {
-	if (mState != State::CONNECTED) return hk::ResultSuccess();
+	if (mState != State::Connected) return hk::ResultSuccess();
 
-	u8 header[cPacketHeaderSize];
-	if (recvAll(header, cPacketHeaderSize) <= 0) return hk::ResultFailed();
-	PacketType packetType = PacketType(header[0]);
+	Menu::log("checking for TCP packet...");
 
-	switch (packetType) {
-	case PacketType::Script: {
-		u8 scriptNameLen = header[1];
-		u32 scriptLen = sead::Endian::swapU32(*(u32*)&header[4]);
+	PacketHeader header;
+	if (recvAll((u8*)&header, cPacketHeaderSize) <= 0) return hk::ResultFailed();
 
-		char scriptName[0x101];
-		if (recvAll((u8*)scriptName, 0xff) <= 0) return hk::ResultFailed();
-		scriptName[0x100] = '\0';
+	Menu::log("received TCP packet: type %d, size %#x", header.type, header.size);
 
-		log("received packet Script: name = %s, len = %d (%d)", scriptName, scriptLen);
+	u8 body[header.size];
+	if (recvAll(body, header.size) <= 0) return hk::ResultFailed();
 
-		char filePath[0x200];
-		snprintf(filePath, sizeof(filePath), "sd:/Calypso/scripts/%s", scriptName);
+	switch (header.type) {
+	case PacketHeader::cPacketType_Frame: {
+		FramePacket frame = *(FramePacket*)body;
 
-		util::createFile(filePath, scriptLen, true);
+		mFrameBuffer.pushBack(frame);
 
-		nn::fs::FileHandle fileHandle;
-		LOG_R(nn::fs::OpenFile(&fileHandle, filePath, nn::fs::OpenMode_Write));
-
-		u8 chunkBuf[0x10000];
-		memset(chunkBuf, 0, sizeof(chunkBuf));
-		s32 totalWritten = 0;
-		while (totalWritten < scriptLen) {
-			s32 remaining = scriptLen - totalWritten;
-			s32 chunkLen = recvAll(chunkBuf, sead::Mathf::min(remaining, sizeof(chunkBuf)));
-			if (chunkLen <= 0) return hk::ResultFailed();
-			LOG_R(nn::fs::WriteFile(fileHandle, totalWritten, chunkBuf, chunkLen, nn::fs::WriteOption::CreateOption(nn::fs::WriteOptionFlag_Flush)));
-			totalWritten += chunkLen;
-		}
-
-		nn::fs::CloseFile(fileHandle);
-
-		log("wrote %d bytes to file '%s'", totalWritten, filePath);
-
-		Menu::log("received script '%s' (%d bytes)", scriptName, scriptLen);
+		Menu::log("frame buffer: %d/%d", mFrameBuffer.count, mFrameBuffer.capacity);
 
 		break;
 	}
-	case PacketType::None: break;
+	case PacketHeader::cPacketType_Log:
+	case PacketHeader::cPacketType_Savestate:
+	case PacketHeader::cPacketType_Command:
+	case PacketHeader::cPacketType_None: break;
 	}
 
 	return hk::ResultSuccess();
 }
 
 s32 Server::sendUDPDatagram() {
-	if (mState != State::CONNECTED) return 0;
+	if (mState != State::Connected) return 0;
 
 	sockaddr_in serverAddr;
 	serverAddr.sin_addr = mServerIP;
@@ -138,7 +126,7 @@ s32 Server::sendUDPDatagram() {
 }
 
 s32 Server::connect() {
-	if (mState == State::CONNECTED) disconnect();
+	if (mState == State::Connected) disconnect();
 
 	// create socket
 	if ((mTCPSockFd = nn::socket::Socket(AF_INET, SOCK_STREAM, 0)) < 0) return nn::socket::GetLastErrno();
@@ -159,7 +147,7 @@ s32 Server::connect() {
 	nn::Result result = nn::socket::Connect(mTCPSockFd, (sockaddr*)&serverAddr, sizeof(serverAddr));
 	if (result.IsFailure()) return nn::socket::GetLastErrno();
 
-	mState = State::CONNECTED;
+	mState = State::Connected;
 
 	const char* serverIP = nn::socket::InetNtoa(mServerIP);
 	Menu::log("Connected to %s:%d!", serverIP, cPort);
@@ -177,7 +165,7 @@ s32 Server::connect() {
 
 void Server::log(const char* fmt, ...) {
 	Server* server = instance();
-	if (server->mState != State::CONNECTED) return;
+	if (server->mState != State::Connected) return;
 
 	va_list args;
 	va_start(args, fmt);
@@ -192,7 +180,7 @@ void Server::log(const char* fmt, ...) {
 
 void Server::disconnect() {
 	Menu::log("disconnected from server");
-	mState = State::DISCONNECTED;
+	mState = State::Disconnected;
 	nn::socket::Close(mTCPSockFd);
 }
 

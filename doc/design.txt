@@ -1,0 +1,108 @@
+PC (server):
+    state machine
+    start:
+        show ip of pc
+        "Waiting for connection..."
+        connection received -> connected
+    connected:
+        script selector
+        current script info (name, author, version, frames)
+            script name
+            author name
+            version
+            game title id
+            command count
+            seconds spent editing
+            frame count (would have to compute this)
+        play script button
+        pause game button
+        frame advance button
+        in-game info display
+        frame counter
+        input display
+        savestate selector
+    
+    parse entire STAS script on PC when selecting
+    convert STAS into internal format to send to switch
+
+
+switch (client):
+    file on sd specifying server ip
+    way of editing that in-game?
+    send mario position (among other things) to server every frame
+    make sure socket is TCP_NODELAY
+
+
+
+
+
+
+
+every(?) command type stays set to the previous value until changed
+keep a copy of every command type in ScriptSTAS
+
+packet types:
+    Frame
+        build a frame packet every frame by copying STAS commands into it
+    
+    Savestate
+
+    Other
+        stuff like "go" command or whatever else
+
+
+api:
+    struct Command {
+        u16 type; // don't output FRAME commands
+    };
+
+    struct ControllerCommand : public Command {};
+    ...
+
+    bool ScriptSTAS::nextFrame() // false if there are no more frames
+    Command* ScriptSTAS::getCommand() // null if no more commands within frame
+
+    {
+        while (script.nextFrame()) {
+            FramePacket packet;
+
+            Command* command = nullptr;
+            while (command = script.getCommand()) {
+                switch (command->type) {
+                case Type::CONTROLLER: {
+                    ControllerCommand* cmd = (ControllerCommand*)command;
+                    packet.controller = *cmd;
+                    break;
+                }
+                case Type::MOTION: {
+                    MotionCommand* cmd = (MotionCommand*)command;
+                    packet.motion = *cmd;
+                    break;
+                }
+                case ...: {
+                    ...
+                }
+                }
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+todo
+
+send UDP data every frame
+
+allow client to detect server disconnecting
+    maybe change the way the TCP recv works to allow this?
+
+make internal script format to send chunked over TCP

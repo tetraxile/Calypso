@@ -53,7 +53,7 @@ PointerAlignment: Left
 QualifierAlignment: Left
 ReflowComments: true
 RemoveParentheses: ReturnStatement
-RemoveSemicolon: true
+RemoveSemicolon: false
 SeparateDefinitionBlocks: Always
 SortIncludes: CaseSensitive
 SpaceAfterCStyleCast: false

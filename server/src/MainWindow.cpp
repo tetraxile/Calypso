@@ -36,10 +36,10 @@ void MainWindow::openFileRecent() {
 }
 
 void MainWindow::openFile(const QString& fileName, bool isSetRecent) {
-	mControls.disable();
+	disableControls();
 
-	QFile file(fileName);
-	if (!file.open(QIODevice::ReadOnly)) {
+	QFile* file = new QFile(fileName);
+	if (!file->open(QIODevice::ReadOnly)) {
 		mLogWidget->log("could not open file: %s", qPrintable(fileName));
 		return;
 	}
@@ -49,7 +49,7 @@ void MainWindow::openFile(const QString& fileName, bool isSetRecent) {
 		delete mScript;
 		mScript = nullptr;
 	}
-	mScript = new ScriptSTAS(file, *mLogWidget);
+	mScript = new ScriptSTAS(*file, *mLogWidget);
 
 	if (isSetRecent) {
 		mRecentScripts->insertItem(0, fileName);
@@ -99,8 +99,6 @@ hk::Result MainWindow::parseScript() {
 	mScriptInfo.author->setText(mScript->mInfo.author);
 	mScriptInfo.commandCount->setText(QString::number(mScript->mInfo.frameCount));
 
-	mScript->close();
-
 	return hk::ResultSuccess();
 }
 
@@ -110,6 +108,11 @@ void MainWindow::clearScript() {
 	mScriptInfo.commandCount->clear();
 	delete mScript;
 	mScript = nullptr;
+
+	disableControls();
+}
+
+void MainWindow::disableControls() {
 	mControls.disable();
 }
 
@@ -138,29 +141,31 @@ void MainWindow::frameAdvance() {
 }
 
 void MainWindow::getNextFrame() {
-	hk::ValueOrResult<ScriptSTAS::Packet&> packetR = mScript->getNextFrame();
-	if (packetR == ResultEndOfScriptReached()) {
+	hk::ValueOrResult<ScriptSTAS::Frame&> frameR = mScript->getNextFrame();
+	if (frameR == ResultEndOfScriptReached()) {
 		clearScript();
 		return;
-	} else if (!packetR.hasValue()) {
-		hk::Result r = packetR;
+	} else if (!frameR.hasValue()) {
+		hk::Result r = frameR;
 		mLogWidget->log("error getting frame: %04d-%04d", r.getModule(), r.getDescription());
 		clearScript();
 		return;
 	}
 
-	ScriptSTAS::Packet& packet = packetR;
+	ScriptSTAS::Frame& frame = frameR;
 
-	auto& player1 = packet.frame.player1;
+	auto& player1 = frame.player1;
 	mInputDisplayWidget->setInputs(player1.leftStick, player1.rightStick, player1.buttons);
-
 	mInputDisplayWidget->update();
+
+	mServer->sendFramePacket(frame);
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 	setupUi();
 
 	mServer = new Server(*mLogWidget);
+	connect(mServer, &Server::disableScriptControls, this, &MainWindow::disableControls);
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {

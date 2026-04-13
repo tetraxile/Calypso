@@ -37,6 +37,7 @@ private slots:
 	void stopScript();
 	void pauseGame();
 	void frameAdvance();
+	void disableControls();
 
 private:
 	void closeEvent(QCloseEvent* event) override;

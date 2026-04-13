@@ -73,7 +73,7 @@ hk::Result ScriptSTAS::readMetadata() {
 	return hk::ResultSuccess();
 }
 
-hk::ValueOrResult<ScriptSTAS::Packet&> ScriptSTAS::getNextFrame() {
+hk::ValueOrResult<ScriptSTAS::Frame&> ScriptSTAS::getNextFrame() {
 	if (mFrameIdx == mNextFrameIdx) {
 		CommandType cmdType = cCommandType_Invalid;
 		do {
@@ -81,8 +81,8 @@ hk::ValueOrResult<ScriptSTAS::Packet&> ScriptSTAS::getNextFrame() {
 		} while (cmdType != cCommandType_Frame);
 	}
 
-	mCurPacket.frame.frameIdx = mFrameIdx++;
-	return mCurPacket;
+	mCurFrame.frameIdx = mFrameIdx++;
+	return mCurFrame;
 }
 
 hk::Result ScriptSTAS::tryReadCommand(CommandType& cmdType) {
@@ -103,7 +103,7 @@ hk::Result ScriptSTAS::tryReadCommand(CommandType& cmdType) {
 	case cCommandType_Controller: {
 		u8 playerID = HK_TRY(mReader.readU8());
 		mReader.alignUp(4);
-		Packet::Controller& controller = playerID == 0 ? mCurPacket.frame.player1 : mCurPacket.frame.player2;
+		Controller& controller = playerID == 0 ? mCurFrame.player1 : mCurFrame.player2;
 
 		controller.buttons = HK_TRY(mReader.readU64());
 		controller.leftStick = HK_TRY(mReader.readVec2i());
@@ -113,7 +113,7 @@ hk::Result ScriptSTAS::tryReadCommand(CommandType& cmdType) {
 	case cCommandType_Motion: {
 		u8 playerID = HK_TRY(mReader.readU8());
 		u8 playerControllerID = HK_TRY(mReader.readU8());
-		Packet::Controller& controller = playerID == 0 ? mCurPacket.frame.player1 : mCurPacket.frame.player2;
+		Controller& controller = playerID == 0 ? mCurFrame.player1 : mCurFrame.player2;
 
 		mReader.alignUp(4);
 		if (playerControllerID == 0) {
@@ -126,7 +126,7 @@ hk::Result ScriptSTAS::tryReadCommand(CommandType& cmdType) {
 		break;
 	}
 	case cCommandType_Amiibo: {
-		mCurPacket.frame.amiibo = HK_TRY(mReader.readU64());
+		mCurFrame.amiibo = HK_TRY(mReader.readU64());
 		break;
 	}
 

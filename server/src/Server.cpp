@@ -2,16 +2,18 @@
 
 #include <QNetworkDatagram>
 
+#include <hk/diag/diag.h>
+
 Server::Server(LogWidget& logWidget) : mLogWidget(logWidget) {
 	mTCPServer = new QTcpServer(this);
 	mTCPServer->listen(QHostAddress::Any, PORT);
 	connect(mTCPServer, &QTcpServer::newConnection, this, &Server::newConnection);
-	mLogWidget.log("listening for TCP connection on port %d...", PORT);
+	mLogWidget.log("[TCP] listening on port %d...", PORT);
 
 	mUDPSocket = new QUdpSocket(this);
 	mUDPSocket->bind(PORT);
 	connect(mUDPSocket, &QUdpSocket::readyRead, this, &Server::receiveUDPData);
-	mLogWidget.log("listening for UDP packets on port %d...", PORT);
+	mLogWidget.log("[UDP] listening on port %d...", PORT);
 }
 
 void Server::close() {
@@ -20,8 +22,23 @@ void Server::close() {
 	}
 }
 
+void Server::sendFramePacket(const ScriptSTAS::Frame& frame) {
+	HK_ASSERT(mTCPSocket != nullptr);
+
+	PacketHeader header(PacketHeader::cPacketType_Frame, sizeof(ScriptSTAS::Frame));
+
+	QByteArray packet;
+	packet.append((const char*)&header, sizeof(header));
+	packet.append((const char*)&frame, sizeof(frame));
+
+	mTCPSocket->write(packet);
+
+	mLogWidget.log("[TCP] wrote %#llx bytes", packet.length());
+}
+
 void Server::newConnection() {
 	mTCPSocket = mTCPServer->nextPendingConnection();
+	mTCPSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 
 	{
 		bool isV4 = false;
@@ -39,6 +56,10 @@ void Server::newConnection() {
 
 void Server::disconnected() {
 	mLogWidget.log("client disconnected");
+
+	mTCPSocket = nullptr;
+
+	emit disableScriptControls();
 }
 
 void Server::receiveTCPData() {

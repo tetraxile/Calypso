@@ -183,7 +183,7 @@ void Menu::drawLog() {
 		hk::util::Vector2i pos = { mCellResolution.x - 5, mCellResolution.y - 1 - i };
 		drawCellBackground(pos, bgColor, { 5, 1 });
 		print(pos, color, entry->text.cstr());
-		entry->age++;
+		// entry->age++;
 	}
 }
 

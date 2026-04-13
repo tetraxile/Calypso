@@ -41,31 +41,23 @@ private:
 	};
 
 public:
-	struct Packet {
-		struct Controller {
-			u64 flags;
-			u64 buttons;
-			Vector2i leftStick;
-			Vector2i rightStick;
-			Vector3f accelLeft;
-			Vector3f gyroLeft;
-			Vector3f accelRight;
-			Vector3f gyroRight;
-		};
+	struct Controller {
+		u64 flags;
+		u64 buttons;
+		Vector2i leftStick;
+		Vector2i rightStick;
+		Vector3f accelLeft;
+		Vector3f gyroLeft;
+		Vector3f accelRight;
+		Vector3f gyroRight;
+	};
 
-		struct Frame {
-			u32 flags;
-			u32 frameIdx;
-			Controller player1;
-			Controller player2;
-			u64 amiibo;
-		};
-
-		char signature[4] = { 'C', 'A', 'L', 'Y' };
-		u8 version = 0;
-		u8 type = 0;
-		u16 size = 0x8 + sizeof(Frame);
-		Frame frame;
+	struct Frame {
+		u32 flags;
+		u32 frameIdx;
+		Controller player1;
+		Controller player2;
+		u64 amiibo;
 	};
 
 	ScriptSTAS(QFile& file, LogWidget& logWidget);
@@ -73,7 +65,7 @@ public:
 	hk::Result readHeader();
 	hk::Result readMetadata();
 	hk::Result verify();
-	hk::ValueOrResult<Packet&> getNextFrame();
+	hk::ValueOrResult<Frame&> getNextFrame();
 	void close();
 
 	struct {
@@ -92,7 +84,7 @@ private:
 	u32 mCommandIdx = 0;
 	u32 mFrameIdx = 0;
 	u32 mNextFrameIdx = 0;
-	Packet mCurPacket;
+	Frame mCurFrame;
 	State mState = State::Uninitialised;
 
 	struct {
