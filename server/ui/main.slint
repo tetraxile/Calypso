@@ -15,7 +15,9 @@ export component MainWindow inherits Window {
   preferred-height: 400px;
 
   callback open_script_dialog();
+  in property<string> script-name;
   in property<string> log;
+  in property<[string]> recent-scripts;
 
   VerticalBox {
     HorizontalBox {
@@ -34,13 +36,14 @@ export component MainWindow inherits Window {
                 ComboBox {
                   height: 2.5rem;
                   preferred-width: 100%;
-                  model: ["first", "second", "third"];
-                  current-value: "first";
+                  model: root.recent-scripts;
+                  current-value: root.recent-scripts[0];
                 }
                 Button {
                   height: 2.5rem;
                   width: 6rem;
                   text: "Open";
+                  clicked => open_script_dialog();
                 }
               }
             }
@@ -81,6 +84,7 @@ export component MainWindow inherits Window {
                     preferred-width: 100%;
                     enabled: false;
                     read-only: true;
+                    text: script-name;
                   }
                 }
                 Row {
@@ -92,6 +96,7 @@ export component MainWindow inherits Window {
                     preferred-width: 100%;
                     enabled: false;
                     read-only: true;
+                    text: "unknown";
                   }
                 }
                 Row {

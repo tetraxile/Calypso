@@ -74,7 +74,7 @@
               {
                 stdenv = llvmPackages_20.libcxxStdenv;
               }
-rec              {
+              rec {
                 buildInputs = build.dependencies ++ [
                   inetutils
                   pkgs.fenix.complete.toolchain
@@ -96,10 +96,14 @@ rec              {
                   libxi
                   libx11
                 ];
-                LD_LIBRARY_PATH = lib.makeLibraryPath (buildInputs ++[
-                  llvmPackages_20.clang-unwrapped.lib
-                  fontconfig.lib
-                ]);
+                LD_LIBRARY_PATH = lib.makeLibraryPath (
+                  buildInputs
+                  ++ [
+                    llvmPackages_20.clang-unwrapped.lib
+                    fontconfig.lib
+                    dbus.lib
+                  ]
+                );
                 NIX_CC_WRAPPER_SUPPRESS_TARGET_WARNING = true;
 
               };
