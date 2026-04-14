@@ -1,0 +1,10 @@
+[package]
+name = "tas-script-formats"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bitfield-struct = "0.13.0"
+eyre = "0.6.12"
+glam = { version = "0.32.1", features = ["zerocopy"] }
+zerocopy = { version = "0.8.48", features = ["derive"] }
