@@ -2,14 +2,12 @@ use std::{borrow::Cow, future::pending};
 
 use futures_util::future::Either;
 use tokio::{
-  io::Interest,
   net::{TcpListener, TcpStream, UdpSocket},
   select,
   sync::mpsc,
 };
 use tracing::{error, warn};
 
-use slint::SharedString;
 
 pub enum ToServer {}
 pub enum ToUi {
@@ -18,12 +16,12 @@ pub enum ToUi {
 
 pub async fn server_task(
   ui: mpsc::UnboundedSender<ToUi>,
-  server: mpsc::UnboundedReceiver<ToServer>,
+  _server: mpsc::UnboundedReceiver<ToServer>,
 ) {
   let tcp_listener = TcpListener::bind("0.0.0.0:8171")
     .await
     .expect("failed to start tcp server on 8171");
-  let udp = UdpSocket::bind("0.0.0.0:8171")
+  let _udp = UdpSocket::bind("0.0.0.0:8171")
     .await
     .expect("failed to bind udp server on 8171");
 

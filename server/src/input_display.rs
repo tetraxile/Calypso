@@ -1,9 +1,9 @@
-pub struct InputDisplay {
+// pub struct InputDisplay {
 
-}
+// }
 
-impl InputDisplay {
-  pub fn paint() {
-    
-  }
-}
+// impl InputDisplay {
+//   pub fn paint() {
+
+//   }
+// }

@@ -3,9 +3,9 @@ mod server;
 mod tracked_value;
 mod input_display;
 
-use std::{cell::RefCell, ffi::OsString, path::PathBuf, rc::Rc};
+use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
-use slint::{ComponentHandle, SharedString, VecModel, spawn_local};
+use slint::{ComponentHandle, SharedString, VecModel};
 use tokio::sync::mpsc;
 
 use crate::{config::Config, server::server_task, tracked_value::TrackedValue};
@@ -108,7 +108,7 @@ fn main() {
     }
   });
   let (to_ui, mut from_server) = mpsc::unbounded_channel();
-  let (to_server, from_ui) = mpsc::unbounded_channel();
+  let (_to_server, from_ui) = mpsc::unbounded_channel();
 
   let _ = slint::spawn_local(async_compat::Compat::new(server_task(to_ui, from_ui)));
   let window_weak = window.as_weak();
