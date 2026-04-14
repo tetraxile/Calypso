@@ -1,0 +1,150 @@
+import {
+  AboutSlint,
+  Button,
+  ComboBox,
+  VerticalBox,
+  GroupBox,
+  HorizontalBox,
+  TextEdit,
+  StandardTableView,
+  LineEdit,
+} from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+  preferred-width: 800px;
+  preferred-height: 400px;
+
+  callback open_script_dialog();
+  in property<string> log;
+
+  VerticalBox {
+    HorizontalBox {
+      GroupBox {
+        width: 33.3%;
+        title: "Controls";
+        VerticalBox {
+          GridLayout {
+            width: 100%;
+            spacing: 0.5rem;
+            Row {
+              HorizontalBox {
+                colspan: 2;
+                padding: 0;
+                // script name and open
+                ComboBox {
+                  height: 2.5rem;
+                  preferred-width: 100%;
+                  model: ["first", "second", "third"];
+                  current-value: "first";
+                }
+                Button {
+                  height: 2.5rem;
+                  width: 6rem;
+                  text: "Open";
+                }
+              }
+            }
+            Row {
+              Button {
+                width: 50%;
+                height: 2.5rem;
+                text: "Run script";
+              }
+              Button {
+                width: 50%;
+                height: 2.5rem;
+                text: "Stop script";
+              }
+            }
+            Row {
+              Button {
+                width: 50%;
+                height: 2.5rem;
+                text: "Pause game";
+              }
+              Button {
+                width: 50%;
+                height: 2.5rem;
+                text: "Frame advance";
+              }
+            }
+            Row {
+              GridLayout {
+                colspan: 2;
+                spacing: 0.5rem;
+                Row {
+                  Text {
+                    text: "Script name";
+                    vertical-alignment: center;
+                  }
+                  LineEdit {
+                    preferred-width: 100%;
+                    enabled: false;
+                    read-only: true;
+                  }
+                }
+                Row {
+                  Text {
+                    text: "Author";
+                    vertical-alignment: center;
+                  }
+                  LineEdit {
+                    preferred-width: 100%;
+                    enabled: false;
+                    read-only: true;
+                  }
+                }
+                Row {
+                  Text {
+                    text: "Command count";
+                    vertical-alignment: center;
+                  }
+                  Text {
+                    text: "todo";
+                    vertical-alignment: center;
+                  }
+                }
+              }
+            }
+          }
+          VerticalBox {
+            HorizontalBox {
+
+            }
+          }
+        }
+      }
+      GroupBox {
+        title: "Savestates";
+        Text {
+          text: "not yet implemented";
+        }
+      }
+      GroupBox {
+        title: "Log";
+        TextEdit {
+          font-size: 14px;
+          text: root.log;
+        }
+      }
+    }
+    HorizontalBox {
+      GroupBox {
+        title: "Input Display";
+        Text {
+          text: "not yet implemented";
+          color: green;
+        }
+      }
+      GroupBox {
+        title: "Game Info";
+        StandardTableView {
+          rows: [
+            [{ text: "Stage Name" }, { text: "not implemented" }],
+            [{ text: "Player Position" }, { text: "not implemented" }],
+          ];
+        }
+      }
+    }
+  }
+}
