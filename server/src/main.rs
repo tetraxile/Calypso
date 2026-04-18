@@ -1,20 +1,24 @@
 mod config;
+mod input_display;
 mod server;
 mod tracked_value;
-mod input_display;
 
-use std::{cell::RefCell, path::PathBuf, rc::Rc};
+use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Mutex};
 
-use slint::{ComponentHandle, SharedString, VecModel};
+use slint::{ComponentHandle, Image, Rgba8Pixel, SharedPixelBuffer, SharedString, VecModel};
+use tiny_skia::PixmapMut;
 use tokio::sync::mpsc;
 
-use crate::{config::Config, server::server_task, tracked_value::TrackedValue};
+use crate::{
+  config::Config, input_display::InputDisplay, server::server_task, tracked_value::TrackedValue,
+};
 
 slint::include_modules!();
 
 struct State {
   active_script: TrackedValue<Option<PathBuf>>,
   log: TrackedValue<String>,
+  input_display: InputDisplay,
   config: Config,
 }
 
@@ -70,6 +74,7 @@ fn main() {
   let state = Rc::new(RefCell::new(State {
     active_script: config.recent_scripts.get().get(0).cloned().into(),
     log: String::new().into(),
+    input_display: InputDisplay::default().into(),
     config,
   }));
 
@@ -107,6 +112,29 @@ fn main() {
       println!("war");
     }
   });
+
+  let state_ = state.clone();
+  window.on_build_image(move |width, height, _input_sequence, scheme| {
+    let state = &state_;
+    static BUFFER: Mutex<Option<SharedPixelBuffer<Rgba8Pixel>>> = Mutex::new(None);
+    let mut buffer_guard = BUFFER.lock().expect("lock poisoned");
+
+    buffer_guard
+      .take_if(|buffer| buffer.width() != width as u32 || buffer.height() != height as u32);
+
+    let buffer = buffer_guard
+      .get_or_insert_with(|| SharedPixelBuffer::<Rgba8Pixel>::new(width as _, height as _));
+
+    let (width, height) = (buffer.width(), buffer.height());
+    state.borrow().input_display.paint(
+      PixmapMut::from_bytes(buffer.make_mut_bytes(), width, height)
+        .expect("failed to create pixmap"),
+      scheme,
+    );
+
+    Image::from_rgba8(buffer.clone())
+  });
+
   let (to_ui, mut from_server) = mpsc::unbounded_channel();
   let (_to_server, from_ui) = mpsc::unbounded_channel();
 
@@ -120,6 +148,7 @@ fn main() {
         .recv()
         .await
         .expect("server closed unexpectedly");
+
       match message {
         server::ToUi::Log(message) => {
           state.borrow_mut().apply_changes(&window, |state| {
@@ -130,6 +159,6 @@ fn main() {
     }
   })
   .unwrap();
-  window.set_log("".into());
+
   window.run().unwrap();
 }

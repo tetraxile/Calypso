@@ -1,4 +1,5 @@
 import {
+  Palette,
   AboutSlint,
   Button,
   ComboBox,
@@ -14,13 +15,18 @@ export component MainWindow inherits Window {
   preferred-width: 800px;
   preferred-height: 400px;
 
-  callback open_script_dialog();
+  callback open-script-dialog();
   in property<string> script-name;
   in property<string> log;
   in property<[string]> recent-scripts;
 
+  pure callback build-image(length, length, int, ColorScheme) -> image;
+  in property<int> input-sequence;
+
   VerticalBox {
+    height: 100%;
     HorizontalBox {
+      height: 50%;
       GroupBox {
         width: 33.3%;
         title: "Controls";
@@ -43,7 +49,7 @@ export component MainWindow inherits Window {
                   height: 2.5rem;
                   width: 6rem;
                   text: "Open";
-                  clicked => open_script_dialog();
+                  clicked => open-script-dialog();
                 }
               }
             }
@@ -133,12 +139,17 @@ export component MainWindow inherits Window {
         }
       }
     }
-    HorizontalBox {
-      GroupBox {
+    lower := HorizontalBox {
+      height: 50%;
+      input-display-group := GroupBox {
+        width: 50%;
         title: "Input Display";
-        Text {
-          text: "not yet implemented";
-          color: green;
+        Rectangle {
+          display := Image {
+            x: 0;
+            y: 0;
+            source: build-image(parent.width, parent.height, input-sequence, Palette.color-scheme);
+          }
         }
       }
       GroupBox {
