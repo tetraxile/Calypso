@@ -49,35 +49,18 @@
                 }
             '';
           };
-          setup-client = stdenv.mkDerivation {
-            name = "setup-client";
-            dontUnpack = true;
-            nativeBuildInputs = [ makeWrapper ];
-            installPhase = ''
-              makeWrapper ${writeShellScript "-inner" ''
-                cmake -S client -B build
-              ''} $out/bin/setup-client \
-                --prefix PATH : ${
-                  lib.makeBinPath [
-                    cmake
-                    gnumake
-                    llvmPackages_20.clang-unwrapped
-                  ]
-                } \
-                --prefix CC ${llvmPackages_20.clang-unwrapped}/bin/clang
-            '';
-          };
         };
         devShells = {
           default =
             mkShell.override
               {
-                stdenv = llvmPackages_20.libcxxStdenv;
+                stdenv = pkgsCross.aarch64-embedded.llvmPackages_20.stdenv;
               }
               rec {
-                buildInputs = build.dependencies ++ [
+                nativeBuildInputs = build.dependencies ++ [
                   inetutils
                   pkgs.fenix.complete.toolchain
+                  cmake
                   openssl
                   pkg-config
                   libxkbcommon
@@ -97,7 +80,7 @@
                   libx11
                 ];
                 LD_LIBRARY_PATH = lib.makeLibraryPath (
-                  buildInputs
+                  nativeBuildInputs
                   ++ [
                     llvmPackages_20.clang-unwrapped.lib
                     fontconfig.lib
