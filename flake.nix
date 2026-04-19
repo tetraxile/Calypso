@@ -27,7 +27,7 @@
         build = import ./client/sys/nix pkgs;
       in
       with pkgs;
-      {
+      rec {
         inherit self;
         formatter = pkgs.nixfmt-tree;
         packages = {
@@ -49,46 +49,56 @@
                 }
             '';
           };
+          cmake = writeShellScriptBin "cmake" "nix develop .#cpp --command bash -c $@";
         };
         devShells = {
-          default =
-            mkShell.override
+          default = mkShell rec {
+            nativeBuildInputs = build.dependencies ++ [
+              inetutils
+              pkgs.fenix.complete.toolchain
+              openssl
+              pkg-config
+              libxkbcommon
+              libGL
+              udev
+              openssl
+              fontconfig
+              packages.cmake
+
+              # WINIT_UNIX_BACKEND=wayland
+              wayland
+
+              # WINIT_UNIX_BACKEND=x11
+              libxcursor
+              libxrandr
+              libxi
+              libx11
+            ];
+            LD_LIBRARY_PATH = lib.makeLibraryPath (
+              nativeBuildInputs
+              ++ [
+                llvmPackages_20.clang-unwrapped.lib
+                fontconfig.lib
+                dbus.lib
+              ]
+            );
+          };
+          cpp =
+            mkShellNoCC.override
               {
                 stdenv = pkgsCross.aarch64-embedded.llvmPackages_20.stdenv;
               }
               rec {
                 nativeBuildInputs = build.dependencies ++ [
-                  inetutils
-                  pkgs.fenix.complete.toolchain
                   cmake
-                  openssl
                   pkg-config
-                  libxkbcommon
-                  libGL
-                  udev
-                  openssl
-                  pkg-config
-                  fontconfig
-
-                  # WINIT_UNIX_BACKEND=wayland
-                  wayland
-
-                  # WINIT_UNIX_BACKEND=x11
-                  libxcursor
-                  libxrandr
-                  libxi
-                  libx11
                 ];
                 LD_LIBRARY_PATH = lib.makeLibraryPath (
                   nativeBuildInputs
                   ++ [
                     llvmPackages_20.clang-unwrapped.lib
-                    fontconfig.lib
-                    dbus.lib
                   ]
                 );
-                NIX_CC_WRAPPER_SUPPRESS_TARGET_WARNING = true;
-
               };
         };
       }

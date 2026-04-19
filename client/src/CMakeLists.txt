@@ -24,3 +24,8 @@ target_include_directories(${PROJECT_NAME}
 
         .
 )
+
+target_compile_definitions(${PROJECT_NAME}
+    PRIVATE
+        -DSERVER_IP="${SERVER_IP}"
+)

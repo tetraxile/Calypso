@@ -6,6 +6,7 @@ tmp/
 scripts/
 .direnv/
 target/
+.envrc.private
 
 client/lib/std
 client/build
