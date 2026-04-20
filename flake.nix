@@ -55,7 +55,10 @@
           default = mkShell rec {
             nativeBuildInputs = build.dependencies ++ [
               inetutils
-              pkgs.fenix.complete.toolchain
+              (pkgs.fenix.combine [
+                pkgs.fenix.stable.defaultToolchain
+                pkgs.fenix.stable.rust-src
+              ])
               openssl
               pkg-config
               libxkbcommon
