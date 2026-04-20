@@ -91,7 +91,6 @@ private:
 		return value;
 	}
 
-	s32 readScriptHeader();
 	bool tryReadCommand(CommandType* cmdType);
 
 	sead::Heap* mHeap = nullptr;
@@ -108,7 +107,6 @@ private:
 public:
 	System() = default;
 	void init(sead::Heap* heap);
-	static void loadScript(const sead::SafeString& filename);
 	static void unloadScript();
 	static void startReplay();
 	static void stopReplay();

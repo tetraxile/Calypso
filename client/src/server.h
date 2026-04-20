@@ -1,5 +1,6 @@
 #pragma once
 
+#include <hk/container/Span.h>
 #include <hk/os/Event.h>
 #include <hk/types.h>
 #include <hk/util/Math.h>
@@ -10,6 +11,7 @@
 #include <sead/basis/seadTypes.h>
 #include <sead/container/seadRingBuffer.h>
 #include <sead/heap/seadExpHeap.h>
+#include <sead/math/seadVector.h>
 
 #include "al/Library/Thread/AsyncFunctorThread.h"
 
@@ -25,23 +27,27 @@ private:
 		Connected,
 	};
 
-	struct PacketHeader {
+	struct [[gnu::packed]] PacketHeader {
 		enum PacketType : u8 {
-			cPacketType_None = 0,
+			cPacketType_ServerInfo,
+			cPacketType_ScriptInfo,
 			cPacketType_Frame,
 			cPacketType_Log,
-			cPacketType_Savestate,
-			cPacketType_Command,
+			cPacketType_LoadSave,
+			cPacketType_GetSave,
+			cPacketType_ReportStageName,
+			cPacketType_ReportPosition,
 		};
 
-		char signature[4];
-		u8 version;
 		PacketType type;
-		u16 size;
+		u32 size;
+	};
+
+	struct ServerInfo {
+		u16 version;
 	};
 
 	struct Controller {
-		u64 flags;
 		u64 buttons;
 		hk::util::Vector2i leftStick;
 		hk::util::Vector2i rightStick;
@@ -52,7 +58,6 @@ private:
 	};
 
 	struct FramePacket {
-		u32 flags;
 		u32 frameIdx;
 		Controller player1;
 		Controller player2;
@@ -107,9 +112,11 @@ public:
 	void init(sead::Heap* heap, const sead::SafeString& serverIP);
 	s32 connect();
 	void disconnect();
-	s32 sendUDPDatagram();
+	s32 sendUDPDatagram(PacketHeader::PacketType type, hk::Span<const u8> data);
 
 	static void log(const char* fmt, ...);
+	static void reportStageName(const sead::SafeString& stageName, s32 scenarioNo);
+	static void reportPlayerPosition(const sead::Vector3f& position);
 };
 
 } // namespace cly

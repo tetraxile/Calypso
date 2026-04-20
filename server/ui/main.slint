@@ -19,6 +19,9 @@ export component MainWindow inherits Window {
   in property<string> script-name;
   in property<string> log;
   in property<[string]> recent-scripts;
+  in property<string> stage-name;
+  in property<int> scenario;
+  in property<{ x: float, y: float, z: float }> position;
 
   pure callback build-image(length, length, int, ColorScheme) -> image;
   in property<int> input-sequence;
@@ -156,8 +159,8 @@ export component MainWindow inherits Window {
         title: "Game Info";
         StandardTableView {
           rows: [
-            [{ text: "Stage Name" }, { text: "not implemented" }],
-            [{ text: "Player Position" }, { text: "not implemented" }],
+            [{ text: "Stage Name" }, { text: "\{stage-name} (scenario: \{scenario})" }],
+            [{ text: "Player Position" }, { text: "(\{position.x}, \{position.y}, \{position.z})" }],
           ];
         }
       }

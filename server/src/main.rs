@@ -6,6 +6,7 @@ mod tracked_value;
 use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Mutex};
 
 use slint::{ComponentHandle, Image, Rgba8Pixel, SharedPixelBuffer, SharedString, VecModel};
+use tas_script_formats::glam::Vec3;
 use tiny_skia::PixmapMut;
 use tokio::sync::mpsc;
 
@@ -20,6 +21,9 @@ struct State {
 	log: TrackedValue<String>,
 	input_display: InputDisplay,
 	config: Config,
+
+	stage: TrackedValue<(String, u32)>,
+	position: TrackedValue<Vec3>,
 }
 
 impl State {
@@ -60,6 +64,15 @@ impl State {
 			update_config = true;
 		});
 
+    self.stage.if_changed(|(name, scenario)| {
+      window.set_stage_name(name.into());
+      window.set_scenario(*scenario as _);
+    });
+
+    self.position.if_changed(|position| {
+      window.set_position((position.x, position.y, position.z));
+    });
+
 		if update_config {
 			self.config.save();
 		}
@@ -76,6 +89,8 @@ fn main() {
 		log: String::new().into(),
 		input_display: InputDisplay::default().into(),
 		config,
+		stage: ("Not in a stage".to_owned(), 0).into(),
+		position: Vec3::ZERO.into(),
 	}));
 
 	state.borrow_mut().apply_changes(&window, |_| {});
@@ -153,8 +168,30 @@ fn main() {
 				server::ToUi::Log(message) => {
 					state.borrow_mut().apply_changes(&window, |state| {
 						state.log.get_mut().push_str(&message);
+						state.log.get_mut().push('\n');
 					});
 				}
+				server::ToUi::ClientError(report) => {
+					state
+						.borrow_mut()
+						.log
+						.get_mut()
+						.push_str(&format!("{}\n", report));
+				}
+				server::ToUi::SaveFile(_) => {}
+				server::ToUi::ReportPosition { position } => {
+					state.borrow_mut().apply_changes(&window, |state| {
+						state.position.set(position);
+					});
+				}
+				server::ToUi::ReportStage {
+					stage_name,
+					scenario,
+				} => {
+					state.borrow_mut().apply_changes(&window, |state| {
+						state.stage.set((stage_name.into(), scenario));
+					});
+        }
 			}
 		}
 	})

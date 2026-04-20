@@ -1,9 +1,13 @@
 #include "server.h"
+#include "hk/container/Array.h"
+#include "hk/types.h"
 #include "menu.h"
+#include "smo/sead/math/seadVectorFwd.h"
 #include "util.h"
 
 #include <hk/diag/diag.h>
 #include <hk/hook/Trampoline.h>
+#include <hk/svc/api.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -71,7 +75,7 @@ void Server::threadRecv() {
 	while (true) {
 		hk::Result r = handlePacket();
 		if (r.failed()) disconnect();
-		nn::os::SleepThread(nn::TimeSpan::FromNanoSeconds(1_sec / 60));
+		hk::svc::SleepThread(-2);
 	}
 }
 
@@ -98,16 +102,13 @@ hk::Result Server::handlePacket() {
 
 		break;
 	}
-	case PacketHeader::cPacketType_Log:
-	case PacketHeader::cPacketType_Savestate:
-	case PacketHeader::cPacketType_Command:
-	case PacketHeader::cPacketType_None: break;
+	default: break;
 	}
 
 	return hk::ResultSuccess();
 }
 
-s32 Server::sendUDPDatagram() {
+s32 Server::sendUDPDatagram(Server::PacketHeader::PacketType type, hk::Span<const u8> data) {
 	if (mState != State::Connected) return 0;
 
 	sockaddr_in serverAddr;
@@ -115,8 +116,17 @@ s32 Server::sendUDPDatagram() {
 	serverAddr.sin_family = nn::socket::InetHtons(AF_INET);
 	serverAddr.sin_port = nn::socket::InetHtons(cPort);
 
-	char message[] = "hi from UDP";
-	s32 r = nn::socket::SendTo(mUDPSockFd, message, strlen(message), 0, (sockaddr*)&serverAddr, sizeof(serverAddr));
+	struct [[gnu::packed]] {
+		PacketHeader header;
+		hk::Array<u8, 500> data;
+	} message = {
+		.header = { .type = type, .size = u32(data.size_bytes()) },
+	};
+
+	memcpy(message.data.data(), data.data(), data.size_bytes());
+
+	s32 r = nn::socket::SendTo(mUDPSockFd, &message, sizeof(PacketHeader) + message.header.size, 0, (sockaddr*)&serverAddr, sizeof(serverAddr));
+
 	if (r < 0) {
 		disconnect();
 		return nn::socket::GetLastErrno();
@@ -153,8 +163,15 @@ s32 Server::connect() {
 	Menu::log("Connected to %s:%d!", serverIP, cPort);
 
 	// send message to server
-	char message[] = "connected!";
-	s32 r = nn::socket::Send(mTCPSockFd, message, strlen(message), 0);
+	struct {
+		PacketHeader header;
+		char message[11] = "connected!";
+	} message = { .header = {
+					  .type = PacketHeader::cPacketType_Log,
+					  .size = 10,
+				  } };
+
+	s32 r = nn::socket::Send(mTCPSockFd, &message, sizeof(message) - 1, 0);
 	if (r < 0) {
 		disconnect();
 		return nn::socket::GetLastErrno();
@@ -170,12 +187,50 @@ void Server::log(const char* fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 
-	char message[0x400];
-	vsnprintf(message, sizeof(message), fmt, args);
+	char message[0x400 + sizeof(PacketHeader)];
+	auto packetHeader = reinterpret_cast<PacketHeader*>(message);
+	s32 len = vsnprintf(message + sizeof(PacketHeader), sizeof(message) - sizeof(PacketHeader), fmt, args);
+	packetHeader->type = PacketHeader::cPacketType_Log;
+	packetHeader->size = len;
 
-	s32 r = nn::socket::Send(server->mTCPSockFd, message, strlen(message), 0);
+	s32 r = nn::socket::Send(server->mTCPSockFd, message, sizeof(PacketHeader) + len, 0);
 
 	va_end(args);
+}
+
+void Server::reportStageName(const sead::SafeString& stageName, s32 scenarioNo) {
+	Server* server = instance();
+	if (server->mState != State::Connected) return;
+	if (stageName == "WorldMapStage") return;
+
+	auto nameLen = stageName.calcLength();
+
+	struct [[gnu::packed]] {
+		PacketHeader header;
+		s32 scenarioNo;
+		std::array<char, 0x100> stageName;
+	} message = {
+		.header = {
+			.type = PacketHeader::cPacketType_ReportStageName,
+			.size = u32(sizeof(s32) + nameLen),
+		},
+		.scenarioNo = scenarioNo,
+	};
+
+	memcpy(&message.stageName, stageName.cstr(), nameLen);
+
+	s32 r = nn::socket::Send(server->mTCPSockFd, &message, sizeof(PacketHeader) + message.header.size, 0);
+}
+
+void Server::reportPlayerPosition(const sead::Vector3f& position) {
+	Server* server = instance();
+	if (server->mState != State::Connected) return;
+
+	hk::Span<const sead::Vector3f> span = { &position, 1 };
+	server->sendUDPDatagram(Server::PacketHeader::cPacketType_ReportPosition, cast<const u8>(span));
+
+
+	// s32 r = nn::socket::Send(server->mTCPSockFd, &message, sizeof(message), 0);
 }
 
 void Server::disconnect() {

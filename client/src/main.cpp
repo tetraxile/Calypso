@@ -1,5 +1,8 @@
+#include "hk/hook/a64/Assembler.h"
+#include "hk/ro/RoUtil.h"
 #include "menu.h"
 #include "server.h"
+#include "smo/game/Scene/StageScene.h"
 #include "tas.h"
 
 #include <hk/Result.h>
@@ -22,6 +25,7 @@
 #include "al/Library/Controller/NpadController.h"
 #include "al/Library/Memory/HeapUtil.h"
 #include "al/Library/Scene/Scene.h"
+#include "al/Library/LiveActor/ActorPoseUtil.h"
 #include "game/System/GameSystem.h"
 
 using namespace hk;
@@ -81,8 +85,16 @@ HkTrampoline<void, GameSystem*> gameSystemUpdate = hk::hook::trampoline([](GameS
 	// cly::Menu::instance()->handleInput(al::getMainControllerPort());
 });
 
+HkTrampoline<void, al::Scene*, const char*, s32> sceneInit = hk::hook::trampoline([](al::Scene* scene, const char* stageName, s32 scenario) -> void {
+	cly::Server::reportStageName(stageName, scenario);
+	sceneInit.orig(scene, stageName, scenario);
+});
+
 HkTrampoline<void, al::Scene*> sceneUpdate = hk::hook::trampoline([](al::Scene* scene) -> void {
 	sceneUpdate.orig(scene);
+	if (auto player = rs::getPlayerActor(scene)) {
+		cly::Server::reportPlayerPosition(al::getTrans(player));
+	}
 	if (cly::tas::System::isReplaying()) cly::tas::System::getNextFrame();
 });
 
@@ -132,7 +144,9 @@ extern "C" void hkMain() {
 	gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
 	gameSystemDraw.installAtSym<"_ZN10GameSystem8drawMainEv">();
 	gameSystemUpdate.installAtSym<"_ZN10GameSystem8movementEv">();
+	sceneInit.installAtSym<"_ZN2al5Scene24initAndLoadStageResourceEPKci">();
 	sceneUpdate.installAtSym<"_ZN2al5Scene8movementEv">();
 	inputHook.installAtSym<"_ZN2al14NpadController9calcImpl_Ev">();
 	fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
+	hook::a64::assemble<"svc #0x28">().installAtOffset(ro::getRtldModule(), 0);
 }

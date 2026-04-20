@@ -37,8 +37,8 @@
             nativeBuildInputs = [ makeWrapper ];
             installPhase = ''
               makeWrapper ${writeShellScript "build-sail-inner" ''
-                cmake -S client/sys/hakkun/sail -B client/sys/hakkun/sail/build
-                cmake --build client/sys/hakkun/sail/build --parallel
+                cmake -S client/sys/sail -B client/sys/sail/build
+                cmake --build client/sys/sail/build --parallel
               ''} $out/bin/build-sail \
                 --prefix PATH : ${
                   lib.makeBinPath [
