@@ -37,6 +37,9 @@ private:
 			cPacketType_GetSave,
 			cPacketType_ReportStageName,
 			cPacketType_ReportPosition,
+			cPacketType_PauseGame,
+			cPacketType_AdvanceFrame,
+			cPacketType_UDPDiscovery,
 		};
 
 		PacketType type;
@@ -64,13 +67,13 @@ private:
 		u64 amiibo;
 	};
 
-	constexpr static s32 cPacketHeaderSize = 0x8;
 	constexpr static s32 cPort = 8171;
 
 	sead::Heap* mHeap = nullptr;
 	al::AsyncFunctorThread* mRecvThread = nullptr;
 	void* mThreadStack = nullptr;
 	in_addr mServerIP;
+	in_addr mBroadcastIP;
 	s32 mTCPSockFd = -1; // for receiving script data, sending logs
 	s32 mUDPSockFd = -1; // for sending real-time game info/inputs
 	State mState = State::Uninitialised;
@@ -109,10 +112,11 @@ private:
 public:
 	Server() = default;
 
-	void init(sead::Heap* heap, const sead::SafeString& serverIP);
+	void init(sead::Heap* heap);
 	s32 connect();
 	void disconnect();
 	s32 sendUDPDatagram(PacketHeader::PacketType type, hk::Span<const u8> data);
+	void sendUDPDiscoveryBroadcast();
 
 	static void log(const char* fmt, ...);
 	static void reportStageName(const sead::SafeString& stageName, s32 scenarioNo);

@@ -47,8 +47,8 @@ void Menu::init(sead::Heap* heap) {
 		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
 	};
 
-	// MenuItem* itemPause = addButton({ 0, 21 }, "toggle pause", []() -> void { tas::Pauser::instance()->togglePause(); })->setSpan({ 2, 1 });
-	// addButton({ 0, 22 }, "advance frame", []() -> void { tas::Pauser::instance()->advanceFrame(); })->setSpan({ 2, 1 });
+	MenuItem* itemPause = addButton({ 0, 21 }, "toggle pause", []() -> void { tas::Pauser::instance()->togglePause(); })->setSpan({ 2, 1 });
+	addButton({ 0, 22 }, "advance frame", []() -> void { tas::Pauser::instance()->advanceFrame(); })->setSpan({ 2, 1 });
 
 	MenuItem* itemConnect = addButton({ 0, 24 }, "connect", []() -> void {
 								cly::Server* server = cly::Server::instance();
@@ -58,7 +58,7 @@ void Menu::init(sead::Heap* heap) {
 
 	// addButton({ 0, 25 }, "send UDP", []() -> void {
 	// 	cly::Server* server = cly::Server::instance();
-		
+
 	// 	if (r != 0) log("Connection error: %s\n", strerror(r));
 	// })->setSpan({ 2, 1 });
 

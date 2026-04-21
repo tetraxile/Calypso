@@ -21,7 +21,6 @@ export component MainWindow inherits Window {
   in property<bool> valid-script-loaded;
   in property<string> script-name;
   in property<string> author;
-  in property<int> command-count;
   in property<int> frame-count;
   callback run-script();
   callback stop-script();
@@ -124,16 +123,6 @@ export component MainWindow inherits Window {
                     enabled: false;
                     read-only: true;
                     text: author;
-                  }
-                }
-                Row {
-                  Text {
-                    text: "Command count";
-                    vertical-alignment: center;
-                  }
-                  Text {
-                    text: command-count;
-                    vertical-alignment: center;
                   }
                 }
                 Row {

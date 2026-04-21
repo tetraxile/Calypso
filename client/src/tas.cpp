@@ -1,8 +1,6 @@
 #include "tas.h"
 #include "menu.h"
 
-#include <cstdio>
-
 #include <hk/diag/diag.h>
 
 #include <nn/fs.h>

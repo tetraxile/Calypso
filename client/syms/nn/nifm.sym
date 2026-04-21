@@ -1,0 +1,6 @@
+@sdk
+
+_ZN2nn4nifm10InitializeEv
+_ZN2nn4nifm27SubmitNetworkRequestAndWaitEv
+_ZN2nn4nifm18IsNetworkAvailableEv
+_ZN2nn4nifm22GetCurrentIpConfigInfoEP7in_addrS2_S2_S2_S2_

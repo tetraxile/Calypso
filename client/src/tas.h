@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <nn/fs.h>
 #include <sead/heap/seadDisposer.h>
 #include <sead/math/seadVector.h>
@@ -121,7 +122,7 @@ class Pauser {
 
 private:
 	bool mIsPaused = false;
-	s32 mFrameAdvance = 0;
+	std::atomic<s32> mFrameAdvance = 0;
 
 public:
 	Pauser() = default;

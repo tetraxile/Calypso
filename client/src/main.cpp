@@ -23,9 +23,9 @@
 
 #include "al/Library/Controller/InputFunction.h"
 #include "al/Library/Controller/NpadController.h"
+#include "al/Library/LiveActor/ActorPoseUtil.h"
 #include "al/Library/Memory/HeapUtil.h"
 #include "al/Library/Scene/Scene.h"
-#include "al/Library/LiveActor/ActorPoseUtil.h"
 #include "game/System/GameSystem.h"
 
 using namespace hk;
@@ -57,8 +57,7 @@ HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSys
 	menu->init(heap);
 
 	cly::Server* server = cly::Server::createInstance(heap);
-	server->init(heap, SERVER_IP);
-	server->connect();
+	server->init(heap);
 
 	cly::tas::System* system = cly::tas::System::createInstance(heap);
 	system->init(heap);
@@ -72,13 +71,20 @@ HkTrampoline<void, GameSystem*> gameSystemDraw = hk::hook::trampoline([](GameSys
 	if (cly::tas::Pauser::instance()->isSequenceActive()) {
 		gameSystemDraw.orig(gameSystem);
 	}
+	cly::tas::Pauser::instance()->update();
 
 	cly::Menu::instance()->draw();
 });
 
+static u8 discoveryTimer = 30;
 HkTrampoline<void, GameSystem*> gameSystemUpdate = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
 	if (cly::tas::Pauser::instance()->isSequenceActive()) {
 		gameSystemUpdate.orig(gameSystem);
+	}
+
+	if (--discoveryTimer == 0) {
+		discoveryTimer = 30;
+		cly::Server::instance()->sendUDPDiscoveryBroadcast();
 	}
 
 	// cly::tas::Pauser::instance()->update();
@@ -109,7 +115,6 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 	// );
 
 	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
-		cly::tas::Pauser::instance()->update();
 		cly::Menu::instance()->handleInput(controller->mPadHold);
 	}
 
@@ -148,5 +153,5 @@ extern "C" void hkMain() {
 	sceneUpdate.installAtSym<"_ZN2al5Scene8movementEv">();
 	inputHook.installAtSym<"_ZN2al14NpadController9calcImpl_Ev">();
 	fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
-	hook::a64::assemble<"svc #0x28">().installAtOffset(ro::getRtldModule(), 0);
+	hook::a64::assemble<"mov x0, #1\nsvc #0x28">().installAtOffset(ro::getRtldModule(), 0);
 }

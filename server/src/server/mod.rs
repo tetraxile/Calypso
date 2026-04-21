@@ -5,7 +5,7 @@ use futures_util::future::{Either, select};
 use num_traits::FromPrimitive;
 use tas_script_formats::glam::Vec3;
 use tokio::{
-	io::AsyncReadExt,
+	io::{AsyncReadExt, AsyncWriteExt},
 	net::{
 		TcpListener, TcpStream, UdpSocket,
 		tcp::{OwnedReadHalf, OwnedWriteHalf},
@@ -30,6 +30,8 @@ pub enum ToServer {
 	GetSave {
 		save_index: u8,
 	},
+	PauseGame,
+	AdvanceFrame,
 }
 
 pub enum ToUi {
@@ -187,6 +189,26 @@ async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Resul
 		ToServer::GetSave { save_index } => {
 			warn!("not sending get save");
 		}
+		ToServer::PauseGame => client
+			.write_all(
+				PacketHeader {
+					packet_type: PacketType::PauseGame as _,
+					size: 0.into(),
+				}
+				.as_bytes(),
+			)
+			.await
+			.context("failed to write pause packet")?,
+		ToServer::AdvanceFrame => client
+			.write_all(
+				PacketHeader {
+					packet_type: PacketType::AdvanceFrame as _,
+					size: 0.into(),
+				}
+				.as_bytes(),
+			)
+			.await
+			.context("failed to write pause packet")?,
 	}
 
 	Ok(())
@@ -197,13 +219,28 @@ async fn udp_task(ui: mpsc::UnboundedSender<ToUi>) {
 		.await
 		.expect("failed to bind udp server on 8171");
 
+	info!(
+		"listening on udp {}",
+		udp.local_addr()
+			.expect("failed to get local listening addr")
+	);
+
 	let mut buffer = [0; 800];
 	loop {
-		let size = udp.recv(&mut buffer).await.unwrap();
+		let (size, addr) = udp.recv_from(&mut buffer).await.unwrap();
 		let buffer = &buffer[..size];
 
 		match handle_udp_message(buffer).await {
-			Ok(to_ui) => ui.send(to_ui).expect("channel closed"),
+			Ok(UdpMessage::Ui(to_ui)) => ui.send(to_ui).expect("channel closed"),
+			Ok(UdpMessage::DiscoveryReply) => {
+				if 0 == udp
+					.send_to(b"hi", addr)
+					.await
+					.expect("failed to send anything")
+				{
+					panic!("sending nothing")
+				}
+			}
 			Err(error) => {
 				error!("failed to read udp packet: {error}");
 			}
@@ -211,7 +248,12 @@ async fn udp_task(ui: mpsc::UnboundedSender<ToUi>) {
 	}
 }
 
-async fn handle_udp_message(data: &[u8]) -> Result<ToUi> {
+enum UdpMessage {
+	Ui(ToUi),
+	DiscoveryReply,
+}
+
+async fn handle_udp_message(data: &[u8]) -> Result<UdpMessage> {
 	// info!("udp packet: {data:02X?}");
 	let (header, data) =
 		PacketHeader::ref_from_prefix(data).map_err(|_| eyre!("failed to read packet header"))?;
@@ -221,10 +263,11 @@ async fn handle_udp_message(data: &[u8]) -> Result<ToUi> {
 		PacketType::ReportPosition => {
 			let (packet, _) = ReportPositionPacket::read_from_prefix(data)
 				.map_err(|_| eyre!("failed to read position report"))?;
-			Ok(ToUi::ReportPosition {
+			Ok(UdpMessage::Ui(ToUi::ReportPosition {
 				position: packet.position,
-			})
+			}))
 		}
+		PacketType::UDPDiscovery => Ok(UdpMessage::DiscoveryReply),
 		packet_type => bail!("unexpected packet type: {packet_type:?}"),
 	}
 }

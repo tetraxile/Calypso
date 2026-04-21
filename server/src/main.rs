@@ -12,7 +12,10 @@ use tiny_skia::PixmapMut;
 use tokio::sync::mpsc;
 
 use crate::{
-	config::Config, input_display::InputDisplay, server::server_task, tracked_value::TrackedValue,
+	config::Config,
+	input_display::InputDisplay,
+	server::{ToServer, server_task},
+	tracked_value::TrackedValue,
 };
 
 slint::include_modules!();
@@ -201,7 +204,21 @@ fn main() {
 	});
 
 	let (to_ui, mut from_server) = mpsc::unbounded_channel();
-	let (_to_server, from_ui) = mpsc::unbounded_channel();
+	let (to_server, from_ui) = mpsc::unbounded_channel();
+
+	window.on_pause_game({
+		let to_server = to_server.clone();
+		move || to_server.send(ToServer::PauseGame).expect("channel closed")
+	});
+
+	window.on_frame_advance({
+		let to_server = to_server.clone();
+		move || {
+			to_server
+				.send(ToServer::AdvanceFrame)
+				.expect("channel closed")
+		}
+	});
 
 	let _ = slint::spawn_local(async_compat::Compat::new(server_task(to_ui, from_ui)));
 	let window_weak = window.as_weak();

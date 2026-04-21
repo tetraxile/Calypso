@@ -1,0 +1,4 @@
+@sdk
+
+_ZN2nn3err20ShowApplicationErrorERKNS0_19ApplicationErrorArgE
+_ZN2nn3err19ApplicationErrorArgC1EjPKcS3_RKNS_8settings12LanguageCodeE
