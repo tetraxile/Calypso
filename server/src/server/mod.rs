@@ -16,7 +16,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
-use crate::server::protocol::{Controller, PacketHeader, PacketType, ReportPositionPacket};
+use crate::server::protocol::{Controller, PacketHeader, PacketType};
 
 mod protocol;
 
@@ -261,10 +261,10 @@ async fn handle_udp_message(data: &[u8]) -> Result<UdpMessage> {
 	let packet_type = PacketType::from_u8(header.packet_type).context("invalid packet type")?;
 	match packet_type {
 		PacketType::ReportPosition => {
-			let (packet, _) = ReportPositionPacket::read_from_prefix(data)
+			let (position, _) = Vec3::read_from_prefix(data)
 				.map_err(|_| eyre!("failed to read position report"))?;
 			Ok(UdpMessage::Ui(ToUi::ReportPosition {
-				position: packet.position,
+				position,
 			}))
 		}
 		PacketType::UDPDiscovery => Ok(UdpMessage::DiscoveryReply),

@@ -21,7 +21,6 @@
 #include <sead/heap/seadHeapMgr.h>
 #include <sead/math/seadVector.h>
 
-#include "al/Library/Controller/InputFunction.h"
 #include "al/Library/Controller/NpadController.h"
 #include "al/Library/LiveActor/ActorPoseUtil.h"
 #include "al/Library/Memory/HeapUtil.h"

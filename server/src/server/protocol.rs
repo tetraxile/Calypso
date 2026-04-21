@@ -39,12 +39,6 @@ pub struct ScriptInfoPacket {
 	pub frame_count: U32,
 }
 
-#[derive(FromBytes, IntoBytes, KnownLayout, Immutable)]
-#[repr(C)]
-pub struct ReportPositionPacket {
-	pub position: Vec3,
-}
-
 #[derive(FromPrimitive, Debug)]
 pub enum PacketType {
 	ServerInfo,
