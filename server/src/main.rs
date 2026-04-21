@@ -5,8 +5,9 @@ mod tracked_value;
 
 use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Mutex};
 
+use eyre::{Context, Result, bail};
 use slint::{ComponentHandle, Image, Rgba8Pixel, SharedPixelBuffer, SharedString, VecModel};
-use tas_script_formats::glam::Vec3;
+use tas_script_formats::{Script, glam::Vec3};
 use tiny_skia::PixmapMut;
 use tokio::sync::mpsc;
 
@@ -16,13 +17,18 @@ use crate::{
 
 slint::include_modules!();
 
+struct ActiveScript {
+	path: PathBuf,
+	script: Script,
+}
+
 struct State {
-	active_script: TrackedValue<Option<PathBuf>>,
+	active_script: TrackedValue<Option<ActiveScript>>,
 	log: TrackedValue<String>,
 	input_display: InputDisplay,
 	config: Config,
 
-	stage: TrackedValue<(String, u32)>,
+	stage: TrackedValue<(String, i32)>,
 	position: TrackedValue<Vec3>,
 }
 
@@ -33,9 +39,10 @@ impl State {
 		self.active_script.if_changed(|script| {
 			window.set_script_name(
 				script
-					.to_owned()
+					.as_ref()
 					.map(|script| {
 						script
+							.path
 							.file_name()
 							.unwrap()
 							.to_string_lossy()
@@ -43,6 +50,19 @@ impl State {
 							.into()
 					})
 					.unwrap_or_default(),
+			);
+			window.set_author(
+				script
+					.as_ref()
+					.and_then(|script| script.script.author.to_owned())
+					.map(|author| author.into())
+					.unwrap_or_default(),
+			);
+			window.set_frame_count(
+				script
+					.as_ref()
+					.map(|script| script.script.frames.len() as _)
+					.unwrap_or(0),
 			);
 		});
 
@@ -64,18 +84,50 @@ impl State {
 			update_config = true;
 		});
 
-    self.stage.if_changed(|(name, scenario)| {
-      window.set_stage_name(name.into());
-      window.set_scenario(*scenario as _);
-    });
+		self.stage.if_changed(|(name, scenario)| {
+			window.set_stage_name(name.into());
+			window.set_scenario(*scenario as _);
+		});
 
-    self.position.if_changed(|position| {
-      window.set_position((position.x, position.y, position.z));
-    });
+		self.position.if_changed(|position| {
+			window.set_position((position.x, position.y, position.z));
+		});
 
 		if update_config {
 			self.config.save();
 		}
+	}
+}
+
+fn try_loading_script(path: &PathBuf, log: &mut String) -> Result<ActiveScript> {
+	let result = std::fs::read(path)
+		.context("failed to read script file from disk")
+		.and_then(|script| tas_script_formats::parse(&script));
+	match result {
+		Ok(script) => Ok(ActiveScript {
+			path: path.clone(),
+			script,
+		}),
+		Err(report) => {
+			log.push_str("server: failed to load script\n");
+			log.push_str(&report.to_string());
+			log.push('\n');
+			bail!("failed to load script");
+		}
+	}
+}
+
+fn select_script(state: &mut State, file: PathBuf) {
+	if !state
+		.config
+		.recent_scripts
+		.get()
+		.iter()
+		.any(|other| other == &file)
+	{
+		let recent_scripts = state.config.recent_scripts.get_mut();
+		recent_scripts.retain(|path| path != &file);
+		recent_scripts.insert(0, file.clone());
 	}
 }
 
@@ -85,7 +137,7 @@ fn main() {
 	let window = MainWindow::new().unwrap();
 	let config = Config::load();
 	let state = Rc::new(RefCell::new(State {
-		active_script: config.recent_scripts.get().get(0).cloned().into(),
+		active_script: None.into(),
 		log: String::new().into(),
 		input_display: InputDisplay::default().into(),
 		config,
@@ -93,13 +145,24 @@ fn main() {
 		position: Vec3::ZERO.into(),
 	}));
 
+	{
+		let mut state = state.borrow_mut();
+		let script = state
+			.config
+			.recent_scripts
+			.get()
+			.get(0)
+			.cloned()
+			.and_then(|path| try_loading_script(&path, state.log.get_mut()).ok());
+		state.active_script.set(script);
+	};
+
 	state.borrow_mut().apply_changes(&window, |_| {});
 
 	let window_weak = window.as_weak();
 	let state_ = state.clone();
 	window.on_open_script_dialog(move || {
 		let state = &state_;
-		println!("test");
 		let window = window_weak.unwrap();
 
 		let fd = rfd::FileDialog::new()
@@ -108,20 +171,7 @@ fn main() {
 
 		if let Some(file) = fd.pick_file() {
 			state.borrow_mut().apply_changes(&window, |state| {
-				if !state
-					.config
-					.recent_scripts
-					.get()
-					.iter()
-					.any(|other| other == &file)
-				{
-					state
-						.config
-						.recent_scripts
-						.get_mut()
-						.insert(0, file.clone());
-				}
-				state.active_script.set(Some(file));
+				select_script(state, file);
 			});
 		} else {
 			println!("war");
@@ -191,7 +241,7 @@ fn main() {
 					state.borrow_mut().apply_changes(&window, |state| {
 						state.stage.set((stage_name.into(), scenario));
 					});
-        }
+				}
 			}
 		}
 	})

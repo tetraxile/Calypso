@@ -7,6 +7,7 @@ scripts/
 .direnv/
 target/
 .envrc.private
+.gdb_history
 
 client/lib/std
 client/build

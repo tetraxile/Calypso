@@ -37,7 +37,7 @@ pub enum ToUi {
 	SaveFile(Vec<u8>),
 	ClientError(eyre::Error),
 
-	ReportStage { stage_name: String, scenario: u32 },
+	ReportStage { stage_name: String, scenario: i32 },
 	ReportPosition { position: Vec3 },
 }
 
@@ -133,7 +133,7 @@ async fn read_packet(stream: &mut OwnedReadHalf) -> Result<ToUi> {
 		PacketType::ReportStageName => {
 			let mut name = vec![0u8; header.size.get() as usize - 4];
 			let scenario = stream
-				.read_u32_le()
+				.read_i32_le()
 				.await
 				.context("failed to read scenario num")?;
 			stream

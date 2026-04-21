@@ -55,6 +55,8 @@ pub enum PacketType {
 	GetSave,
 	ReportStageName,
 	ReportPosition,
+	PauseGame,
+	FrameAdvance,
 }
 
 #[derive(Debug, FromBytes, IntoBytes, KnownLayout, Immutable)]

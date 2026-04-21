@@ -15,16 +15,30 @@ export component MainWindow inherits Window {
   preferred-width: 800px;
   preferred-height: 400px;
 
+  // script menu
   callback open-script-dialog();
-  in property<string> script-name;
-  in property<string> log;
   in property<[string]> recent-scripts;
+  in property<bool> valid-script-loaded;
+  in property<string> script-name;
+  in property<string> author;
+  in property<int> command-count;
+  in property<int> frame-count;
+  callback run-script();
+  callback stop-script();
+  callback pause-game();
+  callback frame-advance();
+
+  // logs
+  in property<string> log;
+
+  // input display
+  pure callback build-image(length, length, int, ColorScheme) -> image;
+  in property<int> input-sequence;
+
+  // game information
   in property<string> stage-name;
   in property<int> scenario;
   in property<{ x: float, y: float, z: float }> position;
-
-  pure callback build-image(length, length, int, ColorScheme) -> image;
-  in property<int> input-sequence;
 
   VerticalBox {
     height: 100%;
@@ -61,11 +75,13 @@ export component MainWindow inherits Window {
                 width: 50%;
                 height: 2.5rem;
                 text: "Run script";
+                clicked => run-script();
               }
               Button {
                 width: 50%;
                 height: 2.5rem;
                 text: "Stop script";
+                clicked => stop-script();
               }
             }
             Row {
@@ -73,11 +89,13 @@ export component MainWindow inherits Window {
                 width: 50%;
                 height: 2.5rem;
                 text: "Pause game";
+                clicked => pause-game();
               }
               Button {
                 width: 50%;
                 height: 2.5rem;
                 text: "Frame advance";
+                clicked => frame-advance();
               }
             }
             Row {
@@ -105,7 +123,7 @@ export component MainWindow inherits Window {
                     preferred-width: 100%;
                     enabled: false;
                     read-only: true;
-                    text: "unknown";
+                    text: author;
                   }
                 }
                 Row {
@@ -114,7 +132,17 @@ export component MainWindow inherits Window {
                     vertical-alignment: center;
                   }
                   Text {
-                    text: "todo";
+                    text: command-count;
+                    vertical-alignment: center;
+                  }
+                }
+                Row {
+                  Text {
+                    text: "Frame count";
+                    vertical-alignment: center;
+                  }
+                  Text {
+                    text: frame-count;
                     vertical-alignment: center;
                   }
                 }
