@@ -84,23 +84,23 @@ struct Frame {
 }
 
 impl Frame {
-	fn to_internal(&self) -> internal::Command {
-		internal::Command::Controller {
-			player_num: if self.is_second_player { 1 } else { 0 },
-			buttons: self.buttons.to_internal(),
-			left_stick: internal::convert_joystick(self.left_stick),
-			right_stick: internal::convert_joystick(self.right_stick),
-			left_accel: self.left_accel,
-			right_accel: self.right_accel,
-			left_gyro: internal::Gyro {
+	fn to_internal(&self) -> Vec<internal::Command> {
+		vec![internal::Command::Controller(internal::Controller {
+			player_id: if self.is_second_player { 1 } else { 0 },
+			buttons: Some(self.buttons.to_internal()),
+			left_stick: Some(internal::convert_joystick(self.left_stick)),
+			right_stick: Some(internal::convert_joystick(self.right_stick)),
+			left_accel: Some(self.left_accel),
+			right_accel: Some(self.right_accel),
+			left_gyro: Some(internal::Gyro {
 				direction: Mat3::IDENTITY,
 				angular_v: Vec3::ZERO,
-			},
-			right_gyro: internal::Gyro {
+			}),
+			right_gyro: Some(internal::Gyro {
 				direction: Mat3::IDENTITY,
 				angular_v: Vec3::ZERO,
-			},
-		}
+			}),
+		})]
 	}
 }
 
@@ -135,9 +135,13 @@ pub fn parse_lunakit(data: &[u8]) -> Result<Script> {
 					part_1.step.get() == part_2.step.get(),
 					"invalid two-player script"
 				);
+				let mut commands = vec![];
+				commands.extend(part_1.to_internal());
+				commands.extend(part_2.to_internal());
+
 				Ok(internal::Frame {
-					cur_frame: part_1.step.get() as usize,
-					commands: vec![part_1.to_internal(), part_2.to_internal()],
+					idx: part_1.step.get() as usize,
+					commands,
 				})
 			})
 			.collect::<Result<Vec<_>>>()?
@@ -145,8 +149,8 @@ pub fn parse_lunakit(data: &[u8]) -> Result<Script> {
 		frames
 			.iter()
 			.map(|f| internal::Frame {
-				cur_frame: f.step.get() as usize,
-				commands: vec![f.to_internal()],
+				idx: f.step.get() as usize,
+				commands: f.to_internal(),
 			})
 			.collect::<Vec<_>>()
 	};

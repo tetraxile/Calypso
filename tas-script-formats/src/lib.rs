@@ -3,6 +3,7 @@ mod lunakit;
 mod nxtas;
 mod stas;
 mod tsvtas;
+mod util;
 use eyre::Result;
 pub use glam;
 pub use internal::*;
@@ -44,9 +45,9 @@ pub fn guess_format(data: &[u8]) -> GuessedFormat {
 
 pub fn parse(data: &[u8]) -> Result<Script> {
 	match guess_format(data) {
-			GuessedFormat::SwitchTAS => parse_stas(data),
-			GuessedFormat::Lunakit => parse_lunakit(data),
-			GuessedFormat::NxTas => parse_nxtas(data),
-			GuessedFormat::Unknown => todo!(),
+		GuessedFormat::SwitchTAS => parse_stas(data),
+		GuessedFormat::Lunakit => parse_lunakit(data),
+		GuessedFormat::NxTas => parse_nxtas(data),
+		GuessedFormat::Unknown => todo!(),
 	}
 }

@@ -5,6 +5,9 @@ edition = "2024"
 
 [dependencies]
 bitfield-struct = "0.13.0"
+byteordered = "0.6.0"
 eyre = "0.6.12"
 glam = { version = "0.32.1", features = ["zerocopy"] }
+num-derive = "0.4.2"
+num-traits = "0.2.19"
 zerocopy = { version = "0.8.48", features = ["derive"] }

@@ -1,5 +1,6 @@
 use bitfield_struct::bitfield;
 use glam::{IVec2, Mat3, Vec2, Vec3};
+use num_derive::FromPrimitive;
 
 #[derive(Debug)]
 pub struct Script {
@@ -11,7 +12,7 @@ pub struct Script {
 
 #[derive(Debug)]
 pub struct Frame {
-	pub cur_frame: usize,
+	pub idx: usize,
 	pub commands: Vec<Command>,
 }
 
@@ -38,7 +39,7 @@ pub struct Buttons {
 	__: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, FromPrimitive)]
 pub enum TouchAttribute {
 	Start,
 	End,
@@ -58,24 +59,39 @@ pub struct Gyro {
 }
 
 #[derive(Debug)]
+pub struct Controller {
+	pub player_id: u8,
+	pub buttons: Option<Buttons>,
+	pub left_stick: Option<IVec2>,
+	pub right_stick: Option<IVec2>,
+	pub left_accel: Option<Vec3>,
+	pub right_accel: Option<Vec3>,
+	pub left_gyro: Option<Gyro>,
+	pub right_gyro: Option<Gyro>,
+}
+
+impl Controller {
+	pub fn new(player_id: u8) -> Controller {
+		Controller {
+			player_id,
+			buttons: None,
+			left_stick: None,
+			right_stick: None,
+			left_accel: None,
+			right_accel: None,
+			left_gyro: None,
+			right_gyro: None,
+		}
+	}
+}
+
+#[derive(Debug)]
 pub enum Command {
-	Controller {
-		player_num: u8,
-		buttons: Buttons,
-		left_stick: IVec2,
-		right_stick: IVec2,
-		left_accel: Vec3,
-		right_accel: Vec3,
-		left_gyro: Gyro,
-		right_gyro: Gyro,
-	},
-	Amiibo {
-		model_info: u64,
-	},
-	Touch {
-		entries: Vec<TouchEntry>,
-	},
-	Save {},
+	Controller(Controller),
+	Amiibo { model_info: u64 },
+	Touch(Vec<TouchEntry>),
+	Save,
+	Comment(String),
 }
 
 pub fn convert_joystick(input: Vec2) -> IVec2 {
