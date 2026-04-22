@@ -1,0 +1,10 @@
+COMMAND:
+	command type ranges:
+		0x0000 - 0x7fff = generic
+		0x8000 - 0xbfff = editor data
+		0xc000 - 0xffff = game-specific
+
+SAVE FILE: command=0xc000
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     |        | data (command size)

@@ -26,24 +26,32 @@ SCRIPT HEADER:
 offset  | size   | note
 --------+--------+-----------------------------------------
 0x0     | 4      | command count, u32
+0x4     | 4      | frame count, u32
 0x4     | 4      | seconds spent editing, u32
 0x8     | 0x8    | controller type per player (NONE=0, PROCON=1, DUAL_JOYCON=2, LEFT_JOYCON=3, RIGHT_JOYCON=4, HANDHELD=5)
-0x10    | 2      | length of author name
+0x10    | 2      | length of author name (= m)
 0x12    | m      | author name (UTF-8)
-...%0x4 (end, pad with 0-bytes if neccessary)
-...%0x4 | 8      | size of game-header (p)
-...%0x4 | p      | game-header information
-
+%0x4    | 4      | length of script title (= s)
+		| s      | script title (UTF-8)
+%0x4    | 4      | length of description (= d)
+		| d      | description (UTF-8)
+%0x4    | 8      | size of game-header (= p)
+		| p      | game-header information
+%0x4 (end, pad with 0-bytes if necessary)
 
 
 
 
 COMMAND:
+	command type ranges:
+		0x0000 - 0x7fff = generic
+		0x8000 - 0xbfff = editor data
+		0xc000 - 0xffff = game-specific
 
 offset  | size   | note
 --------+--------+-----------------------------------------
-0x0     | 2      | type/tag (0-32767 = generic, 32768-49151 = editor data, 49152-65535 = game-specific)
-0x2     | 6      | size (n)
+0x0     | 2      | type/tag
+0x2     | 6      | size (= n)
 0x8     | n      | data
 
 FRAME: command=0 (waits until the listed frame)
@@ -58,8 +66,8 @@ offset  | size   | note
 --------+--------+-----------------------------------------
 0x0     | 1      | player ID
 0x1     | 7      | buttons
-0x8     | 8      | left stick (s32, s32)
-0x10    | 8      | right stick (s32, s32)
+0x8     | 8      | left stick, (s32, s32)
+0x10    | 8      | right stick, (s32, s32)
 --------+--------+-----------------------------------------
 total   | 0x18   |
 
@@ -83,14 +91,14 @@ total   | 0x8    |
 TOUCH: command=4 (touchpad inputs)
 offset  | size   | note
 --------+--------+-----------------------------------------
-0x0     | 4      | entry count (s32) - (n)
+0x0     | 4      | entry count, u32 (= n)
 0x4     | n*0x10 | TouchEntry
 
 TouchEntry
 offset  | size   | note
 --------+--------+-----------------------------------------
 0x0     | 1      | touch attribute (START=0, END=1)
-0x4     | 4      | finger ID (u32)
+0x4     | 4      | finger ID, u32
 0x8     | 8      | position
 --------+--------+-----------------------------------------
 total   | 0x10   |
@@ -101,7 +109,7 @@ MOUSE/KEYBOARD/RING FIT/... will take command=5...
 
 EDITOR-DATA:
 
-Comment: command=32768
+COMMENT: command=0x8000
 offset  | size   | note
 --------+--------+-----------------------------------------
 0x0     | m      | comment, size is taken from COMMAND header
