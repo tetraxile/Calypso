@@ -49,11 +49,11 @@
                 }
             '';
           };
-          cmake = writeShellScriptBin "cmake" "nix develop .#cpp --command bash -c $@";
+          cmake = writeShellScriptBin "cmake" "nix develop .#cpp --command cmake $@";
         };
         devShells = {
           default = mkShell rec {
-            nativeBuildInputs = build.dependencies ++ [
+            nativeBuildInputs = [
               inetutils
               (pkgs.fenix.combine [
                 pkgs.fenix.stable.defaultToolchain
@@ -93,7 +93,6 @@
               }
               rec {
                 nativeBuildInputs = build.dependencies ++ [
-                  cmake
                   pkg-config
                 ];
                 LD_LIBRARY_PATH = lib.makeLibraryPath (
