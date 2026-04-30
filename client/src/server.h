@@ -40,6 +40,10 @@ private:
 			cPacketType_PauseGame,
 			cPacketType_AdvanceFrame,
 			cPacketType_UDPDiscovery,
+			cPacketType_FullFrameBuffer,
+			cPacketType_StartScript,
+			cPacketType_StopScript,
+			cPacketType_ScriptEnded,
 		};
 
 		PacketType type;
@@ -50,23 +54,32 @@ private:
 		u16 version;
 	};
 
+public:
 	struct Controller {
 		u64 buttons;
-		hk::util::Vector2i leftStick;
-		hk::util::Vector2i rightStick;
-		hk::util::Vector3f accelLeft;
-		hk::util::Vector3f gyroLeft;
-		hk::util::Vector3f accelRight;
-		hk::util::Vector3f gyroRight;
+		sead::Vector2i leftStick;
+		sead::Vector2i rightStick;
+		sead::Vector3f accelLeft;
+		sead::Vector3f gyroLeft;
+		sead::Vector3f accelRight;
+		sead::Vector3f gyroRight;
 	};
 
 	struct FramePacket {
-		u32 frameIdx;
+		u32 frameIndex;
+		u32 serverIndex;
 		Controller player1;
 		Controller player2;
 		u64 amiibo;
 	};
 
+	struct ScriptInfoPacket {
+		u32 frameCount;
+		u8 playerCount;
+		u8 controllerTypes[2];
+	};
+
+private:
 	constexpr static s32 cPort = 8171;
 
 	sead::Heap* mHeap = nullptr;
@@ -78,16 +91,42 @@ private:
 	s32 mUDPSockFd = -1; // for sending real-time game info/inputs
 	State mState = State::Uninitialised;
 
+	void threadRecv();
+	hk::Result handlePacket();
+	s32 recvAll(u8* recvBuf, s32 remaining);
+
+public:
+	Server() = default;
+
+	void init(sead::Heap* heap);
+	s32 connect();
+	void disconnect();
+	bool sendTCPMessage(hk::Span<const u8> data);
+
+	template <typename T>
+	bool sendTCPMessage(T& message) {
+		return sendTCPMessage(hk::Span { cast<const u8*>(&message), sizeof(PacketHeader) + message.header.size });
+	}
+
+	s32 sendUDPDatagram(PacketHeader::PacketType type, hk::Span<const u8> data);
+	void sendUDPDiscoveryBroadcast();
+
+	static void log(const char* fmt, ...);
+	static void reportStageName(const sead::SafeString& stageName, s32 scenarioNo);
+	static void reportPlayerPosition(const sead::Vector3f& position);
+	static void reportScriptCompleted();
+
 	struct {
 		s32 count = 0;
 		s32 capacity = 60;
 		s32 head = 0;
 		FramePacket buf[60];
-		hk::os::Event removeEvent;
+
+		void clear() {
+			count = 0;
+		}
 
 		void pushBack(FramePacket& frame) {
-			if (count > capacity) removeEvent.wait();
-
 			buf[head++] = frame;
 			count++;
 			if (head >= capacity) head -= capacity;
@@ -100,27 +139,9 @@ private:
 			head--;
 			if (head < 0) head += capacity;
 			FramePacket frame = buf[head];
-			removeEvent.signal();
 			return frame;
 		}
 	} mFrameBuffer;
-
-	void threadRecv();
-	hk::Result handlePacket();
-	s32 recvAll(u8* recvBuf, s32 remaining);
-
-public:
-	Server() = default;
-
-	void init(sead::Heap* heap);
-	s32 connect();
-	void disconnect();
-	s32 sendUDPDatagram(PacketHeader::PacketType type, hk::Span<const u8> data);
-	void sendUDPDiscoveryBroadcast();
-
-	static void log(const char* fmt, ...);
-	static void reportStageName(const sead::SafeString& stageName, s32 scenarioNo);
-	static void reportPlayerPosition(const sead::Vector3f& position);
 };
 
 } // namespace cly

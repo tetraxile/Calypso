@@ -47,6 +47,31 @@ void Menu::init(sead::Heap* heap) {
 		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
 	};
 
+	MenuItem* frameBuffer = addText({mCellResolution.x - 3, 0}, "fb: 0/0");
+	frameBuffer->mDrawFunc = [](MenuItem* self) -> void {
+		auto server = Server::instance();
+		self->mText.format("fb: %d/%d", server->mFrameBuffer.count, server->mFrameBuffer.capacity);
+		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
+	};
+	MenuItem* progress = addText({mCellResolution.x - 3, 1}, "pr: 0/0");
+	progress->mDrawFunc = [](MenuItem* self) -> void {
+		auto system = tas::System::instance();
+		self->mText.format("pr: %d/%d", system->getFrameIndex(), system->getFrameCount());
+		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
+	};
+	MenuItem* paused = addText({mCellResolution.x - 3, 2}, "p: -");
+	paused->mDrawFunc = [](MenuItem* self) -> void {
+		auto pauser = tas::Pauser::instance();
+		self->mText.format("pa: %s", pauser->isSequenceActive() ? "-" : "+");
+		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
+	};
+	MenuItem* playing = addText({mCellResolution.x - 3, 3}, "pl: -");
+	playing->mDrawFunc = [](MenuItem* self) -> void {
+		auto system = tas::System::instance();
+		self->mText.format("pl: %s", system->isReplaying() ? "+" : "-");
+		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
+	};
+
 	MenuItem* itemPause = addButton({ 0, 21 }, "toggle pause", []() -> void { tas::Pauser::instance()->togglePause(); })->setSpan({ 2, 1 });
 	addButton({ 0, 22 }, "advance frame", []() -> void { tas::Pauser::instance()->advanceFrame(); })->setSpan({ 2, 1 });
 

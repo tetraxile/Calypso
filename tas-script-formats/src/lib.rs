@@ -7,9 +7,9 @@ mod util;
 use eyre::Result;
 pub use glam;
 pub use internal::*;
-pub use lunakit::parse_lunakit;
+pub use lunakit::{parse_lunakit, Buttons as LunakitButtons};
 pub use nxtas::parse_nxtas;
-pub use stas::parse_stas;
+pub use stas::{parse_stas, Buttons as STASButtons};
 pub use tsvtas::parse_tsvtas;
 
 #[derive(Debug)]

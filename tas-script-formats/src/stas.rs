@@ -1,19 +1,21 @@
 use crate::util::align_stream;
-use crate::{Script, internal};
+use crate::{ControllerType, Script, internal};
 use bitfield_struct::bitfield;
 use byteordered::byteorder::LittleEndian;
 use byteordered::{ByteOrdered, StaticEndianness};
-use eyre::{Result, bail, ensure, eyre};
+use eyre::{ContextCompat, Result, ensure, eyre};
 use glam::{IVec2, Vec3};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Seek};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 type BinaryReader<'a> = ByteOrdered<Cursor<&'a [u8]>, StaticEndianness<LittleEndian>>;
 
 #[bitfield(u64)]
-struct Buttons {
+#[derive(FromBytes, IntoBytes, KnownLayout, Immutable)]
+pub struct Buttons {
 	a: bool,
 	b: bool,
 	x: bool,
@@ -35,7 +37,7 @@ struct Buttons {
 }
 
 impl Buttons {
-	fn to_internal(&self) -> internal::Buttons {
+	pub fn to_internal(&self) -> internal::Buttons {
 		internal::Buttons::new()
 			.with_a(self.a())
 			.with_b(self.b())
@@ -53,6 +55,26 @@ impl Buttons {
 			.with_right(self.right())
 			.with_right_stick(self.right_stick())
 			.with_left_stick(self.left_stick())
+	}
+
+	pub fn from_internal(buttons: internal::Buttons) -> Self {
+		Self::new()
+			.with_a(buttons.a())
+			.with_b(buttons.b())
+			.with_x(buttons.x())
+			.with_y(buttons.y())
+			.with_zl(buttons.zl())
+			.with_zr(buttons.zr())
+			.with_l(buttons.l())
+			.with_r(buttons.r())
+			.with_minus(buttons.minus())
+			.with_plus(buttons.plus())
+			.with_up(buttons.up())
+			.with_down(buttons.down())
+			.with_left(buttons.left())
+			.with_right(buttons.right())
+			.with_right_stick(buttons.right_stick())
+			.with_left_stick(buttons.left_stick())
 	}
 }
 
@@ -309,6 +331,12 @@ pub fn parse_stas(data: &[u8]) -> Result<Script> {
 		_ => unreachable!(),
 	}
 
+	let controller_types = controller_types
+		.into_iter()
+		.map(ControllerType::from_u8)
+		.collect::<Option<Vec<_>>>()
+		.context("a controller type was invalid")?;
+
 	ensure!(
 		player_count == 1 || player_count == 2,
 		"player count must be 1 or 2 (got: {player_count})"
@@ -367,7 +395,7 @@ pub fn parse_stas(data: &[u8]) -> Result<Script> {
 							player_id,
 							controller_id,
 							accel,
-							gyro,
+							gyro: _,
 						} => {
 							controllers
 								.entry(player_id)
@@ -427,6 +455,7 @@ pub fn parse_stas(data: &[u8]) -> Result<Script> {
 		author: author_name,
 		seconds_spent_editing: Some(seconds_edited),
 		is_two_player: player_count == 2,
+		controller_types,
 		frames,
 	})
 }

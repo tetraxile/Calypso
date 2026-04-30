@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 async-compat = "0.2.5"
+bitfield-struct = "0.13.0"
 directories = "6.0.0"
 eyre = "0.6.12"
 futures-util = "0.3.32"
@@ -15,7 +16,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 slint = { version = "1.15", features = ["raw-window-handle-06"] }
 tas-script-formats = { version = "0.1.0", path = "../tas-script-formats" }
 tiny-skia = "0.12.0"
-tokio = { version = "1.51.1", features = ["io-util", "macros", "net", "sync"] }
+tokio = { version = "1.51.1", features = ["io-util", "macros", "net", "sync", "time"] }
 tokio-util = "0.7.18"
 toml = "1.1.2"
 tracing = "0.1.44"

@@ -1,4 +1,4 @@
-use crate::{Script, internal};
+use crate::{ControllerType, Script, internal};
 use bitfield_struct::bitfield;
 use eyre::{Result, ensure, eyre};
 use glam::{Mat3, Vec2, Vec3};
@@ -13,7 +13,7 @@ struct Gyro {
 
 #[bitfield(u32)]
 #[derive(TryFromBytes, KnownLayout, Immutable)]
-struct Buttons {
+pub struct Buttons {
 	a: bool,
 	b: bool,
 	zl: bool,
@@ -66,6 +66,27 @@ impl Buttons {
 			.with_right_stick(self.right_stick())
 			.with_left_stick(self.left_stick())
 			.with_home(self.home())
+	}
+
+	pub fn from_internal(buttons: internal::Buttons) -> Self {
+		Self::new()
+			.with_a(buttons.a())
+			.with_b(buttons.b())
+			.with_x(buttons.x())
+			.with_y(buttons.y())
+			.with_zl(buttons.zl())
+			.with_zr(buttons.zr())
+			.with_l(buttons.l())
+			.with_r(buttons.r())
+			.with_minus(buttons.minus())
+			.with_plus(buttons.plus())
+			.with_up(buttons.up())
+			.with_down(buttons.down())
+			.with_left(buttons.left())
+			.with_right(buttons.right())
+			.with_right_stick(buttons.right_stick())
+			.with_left_stick(buttons.left_stick())
+			.with_home(buttons.home())
 	}
 }
 
@@ -159,6 +180,16 @@ pub fn parse_lunakit(data: &[u8]) -> Result<Script> {
 		author: None,
 		seconds_spent_editing: None,
 		is_two_player: header.is_two_player,
+		controller_types: if !header.is_two_player {
+			vec![
+				ControllerType::DualJoycon
+			]
+		} else {
+			vec![
+				ControllerType::DualJoycon,
+				ControllerType::DualJoycon
+			]
+		},
 		frames,
 	})
 }

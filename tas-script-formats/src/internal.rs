@@ -7,7 +7,19 @@ pub struct Script {
 	pub author: Option<String>,
 	pub seconds_spent_editing: Option<u32>,
 	pub is_two_player: bool,
+	pub controller_types: Vec<ControllerType>,
 	pub frames: Vec<Frame>,
+}
+
+#[derive(Debug, FromPrimitive, Clone, Copy)]
+#[repr(u8)]
+pub enum ControllerType {
+	None = 0,
+	Procon = 1,
+	DualJoycon = 2,
+	LeftJoycon = 3,
+	RightJoycon = 4,
+	Handheld = 5,
 }
 
 #[derive(Debug)]

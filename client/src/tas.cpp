@@ -1,5 +1,6 @@
 #include "tas.h"
 #include "menu.h"
+#include "server.h"
 
 #include <hk/diag/diag.h>
 
@@ -16,137 +17,67 @@ void System::init(sead::Heap* heap) {
 	mHeap = heap;
 }
 
-bool System::tryReadCommand(CommandType* cmdType) {
-	if (mCommandIdx >= mScriptInfo.commandCount) return false;
-
-	CommandType type = read<CommandType>();
-	u16 size = read<u16>();
-
-	switch (type) {
-	case CommandType::FRAME: {
-		Menu::log("command: FRAME");
-		mNextFrameIdx = read<u32>();
-		break;
-	}
-	case CommandType::CONTROLLER: {
-		Menu::log("command: CONTROLLER");
-
-		u8 playerID = read<u8>();
-		mCursor += 3;
-		u64 buttons = read<u64>();
-		s32 leftStickX = read<s32>();
-		s32 leftStickY = read<s32>();
-		s32 rightStickX = read<s32>();
-		s32 rightStickY = read<s32>();
-
-		mCurFrame.padHold = buttons;
-		mCurFrame.leftStick = { (f32)leftStickX, (f32)leftStickY };
-		mCurFrame.rightStick = { (f32)rightStickX, (f32)rightStickY };
-		break;
-	}
-	case CommandType::MOTION:
-	case CommandType::AMIIBO:
-	case CommandType::TOUCH:
-	case CommandType::INVALID: {
-		Menu::log("ERROR: unsupported command type %d", type);
-		mCursor -= 4;
-		return false;
-	}
-	}
-
-	*cmdType = type;
-	mCommandIdx++;
-
-	return true;
-}
-
 void System::getNextFrame() {
 	System* self = instance();
-	if (!self->mScriptData || !self->isReplaying()) {
+	Pauser::instance()->setBlocked(false);
+	if (!self->isReplaying()) {
 		Menu::log("ERROR: no script loaded");
 		return;
 	}
 
-	CommandType cmdType = CommandType::INVALID;
-	if (self->mFrameIdx == self->mNextFrameIdx) {
-		// read commands until next FRAME type command
-		do {
-			// if script ends or errors then stop replaying
-			if (!self->tryReadCommand(&cmdType)) {
-				self->stopReplay();
-				return;
-			}
-		} while (cmdType != CommandType::FRAME);
+	if (self->mFrameIdx >= self->mScriptInfo.frameCount) {
+		if (self->mFrameIdx == self->mScriptInfo.frameCount) {
+			self->mFrameIdx++;
+			Menu::log("script ended?");
+			Server::reportScriptCompleted();
+			self->stopReplay();
+		}
+		return;
 	}
 
-	Menu::log("%03d: %016lx %016lx", self->mFrameIdx, self->mCurFrame.padHold);
+	if (!self->mHasCurFrame || self->mCurFrame.frameIndex <= self->mFrameIdx) {
+		auto result = Server::instance()->mFrameBuffer.popBack();
+		if (!result.hasValue()) {
+			Pauser::instance()->setBlocked(true);
+			return;
+		}
 
+		self->mCurFrame = HK_UNWRAP(result);
+		self->mHasCurFrame = true;
+	}
+
+	Menu::log("%03d: %016lx %016lx", self->mFrameIdx, self->mCurFrame.player1.buttons);
 	self->mFrameIdx++;
 }
 
-bool System::tryReadCurFrame(InputFrame* out) {
+hk::ValueOrResult<Server::FramePacket> System::tryReadCurFrame() {
 	System* self = instance();
 
 	bool isReplay = self->isReplaying();
-	if (isReplay) *out = self->mCurFrame;
+	if (isReplay) {
+		self->mHasCurFrame = false;
+		return self->mCurFrame;
+	}
 
-	return isReplay;
+	return hk::ResultFailed();
 }
 
 void System::startReplay() {
 	System* self = instance();
 	if (self->mIsReplaying) return;
 
-	if (!self->mScriptData) {
-		Menu::log("ERROR: no script loaded");
-		return;
-	}
 	self->mIsReplaying = true;
 	Menu::log("started replaying");
-
-	// read commands up to first FRAME command (metadata)
-	CommandType cmdType = CommandType::INVALID;
-	do {
-		if (!self->tryReadCommand(&cmdType)) {
-			self->stopReplay();
-			return;
-		}
-	} while (cmdType != CommandType::FRAME);
 }
 
 void System::stopReplay() {
 	System* self = instance();
 	if (self->mIsReplaying) {
 		self->mIsReplaying = false;
-		self->unloadScript();
+		self->mFrameIdx = 0;
+		self->mHasCurFrame = false;
 		Menu::log("stopped replaying");
 	}
-}
-
-bool System::isReplaying() {
-	return instance()->mIsReplaying;
-}
-
-u32 System::getFrameCount() {
-	// TODO: iterate through commands to get frame count
-	return 123456789;
-}
-
-void System::unloadScript() {
-	System* self = instance();
-	self->mScriptInfo.clear();
-	self->mCursor = 0;
-	self->mCommandIdx = 0;
-	self->mFrameIdx = 0;
-	self->mNextFrameIdx = 0;
-	delete self->mScriptData;
-	self->mScriptData = nullptr;
-}
-
-void System::ScriptInfo::clear() {
-	isLoaded = false;
-	playerCount = 0;
-	commandCount = 0;
 }
 
 sead::BitFlag32 convertButtonsSTASToSead(sead::BitFlag64 stasPad) {
@@ -186,22 +117,22 @@ sead::BitFlag32 convertButtonsSTASToSead(sead::BitFlag64 stasPad) {
 				mask.setBit(sead::Controller::cPadIdx_Right);
 			else if (i == cSTAS_DDown)
 				mask.setBit(sead::Controller::cPadIdx_Down);
-			else if (i == cSTAS_LeftStickLeft)
-				mask.setBit(sead::Controller::cPadIdx_LeftStickLeft);
-			else if (i == cSTAS_LeftStickUp)
-				mask.setBit(sead::Controller::cPadIdx_LeftStickUp);
-			else if (i == cSTAS_LeftStickRight)
-				mask.setBit(sead::Controller::cPadIdx_LeftStickRight);
-			else if (i == cSTAS_LeftStickDown)
-				mask.setBit(sead::Controller::cPadIdx_LeftStickDown);
-			else if (i == cSTAS_RightStickLeft)
-				mask.setBit(sead::Controller::cPadIdx_RightStickLeft);
-			else if (i == cSTAS_RightStickUp)
-				mask.setBit(sead::Controller::cPadIdx_RightStickUp);
-			else if (i == cSTAS_RightStickRight)
-				mask.setBit(sead::Controller::cPadIdx_RightStickRight);
-			else if (i == cSTAS_RightStickDown)
-				mask.setBit(sead::Controller::cPadIdx_RightStickDown);
+			// else if (i == cSTAS_LeftStickLeft)
+			// 	mask.setBit(sead::Controller::cPadIdx_LeftStickLeft);
+			// else if (i == cSTAS_LeftStickUp)
+			// 	mask.setBit(sead::Controller::cPadIdx_LeftStickUp);
+			// else if (i == cSTAS_LeftStickRight)
+			// 	mask.setBit(sead::Controller::cPadIdx_LeftStickRight);
+			// else if (i == cSTAS_LeftStickDown)
+			// 	mask.setBit(sead::Controller::cPadIdx_LeftStickDown);
+			// else if (i == cSTAS_RightStickLeft)
+			// 	mask.setBit(sead::Controller::cPadIdx_RightStickLeft);
+			// else if (i == cSTAS_RightStickUp)
+			// 	mask.setBit(sead::Controller::cPadIdx_RightStickUp);
+			// else if (i == cSTAS_RightStickRight)
+			// 	mask.setBit(sead::Controller::cPadIdx_RightStickRight);
+			// else if (i == cSTAS_RightStickDown)
+			// 	mask.setBit(sead::Controller::cPadIdx_RightStickDown);
 		}
 	}
 

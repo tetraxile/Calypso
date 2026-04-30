@@ -29,14 +29,14 @@ offset  | size   | note
 0x4     | 4      | frame count, u32
 0x4     | 4      | seconds spent editing, u32
 0x8     | 0x8    | controller type per player (NONE=0, PROCON=1, DUAL_JOYCON=2, LEFT_JOYCON=3, RIGHT_JOYCON=4, HANDHELD=5)
-0x10    | 2      | length of author name (= m)
+0x10    | 2      | length of author name (= m)	
 0x12    | m      | author name (UTF-8)
 %0x4    | 4      | length of script title (= s)
-		| s      | script title (UTF-8)
+        | s      | script title (UTF-8)
 %0x4    | 4      | length of description (= d)
-		| d      | description (UTF-8)
+        | d      | description (UTF-8)
 %0x4    | 8      | size of game-header (= p)
-		| p      | game-header information
+        | p      | game-header information
 %0x4 (end, pad with 0-bytes if necessary)
 
 
@@ -65,7 +65,7 @@ CONTROLLER: command=1 (normal controller inputs)
 offset  | size   | note
 --------+--------+-----------------------------------------
 0x0     | 1      | player ID
-0x1     | 7      | buttons
+0x1     | 7      | buttons (game-specific how it is used)
 0x8     | 8      | left stick, (s32, s32)
 0x10    | 8      | right stick, (s32, s32)
 --------+--------+-----------------------------------------

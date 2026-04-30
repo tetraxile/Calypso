@@ -4,6 +4,26 @@ COMMAND:
 		0x8000 - 0xbfff = editor data
 		0xc000 - 0xffff = game-specific
 
+CONTROLLER: command=1 (normal controller inputs)
+bit | button name
+----+-------------
+0   | a
+1   | b
+2   | x
+3   | y
+4   | left stick click
+5   | right stick click
+6   | l
+7   | r
+8   | zl
+9   | zr
+10  | plus
+11  | minus
+12  | left
+13  | up
+14  | right
+15  | down
+
 SAVE FILE: command=0xc000
 offset  | size   | note
 --------+--------+-----------------------------------------

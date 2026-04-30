@@ -1,19 +1,28 @@
 mod config;
 mod input_display;
+mod script_sender;
 mod server;
 mod tracked_value;
 
-use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Mutex};
+use std::{
+	cell::RefCell,
+	panic::{AssertUnwindSafe, catch_unwind},
+	path::PathBuf,
+	rc::Rc,
+	sync::{Arc, Mutex},
+};
 
 use eyre::{Context, Result, bail};
 use slint::{ComponentHandle, Image, Rgba8Pixel, SharedPixelBuffer, SharedString, VecModel};
 use tas_script_formats::{Script, glam::Vec3};
 use tiny_skia::PixmapMut;
 use tokio::sync::mpsc;
+use tracing::info;
 
 use crate::{
 	config::Config,
 	input_display::InputDisplay,
+	script_sender::{ScriptMessage, script_sender},
 	server::{ToServer, server_task},
 	tracked_value::TrackedValue,
 };
@@ -22,11 +31,13 @@ slint::include_modules!();
 
 struct ActiveScript {
 	path: PathBuf,
-	script: Script,
+	script: Arc<Script>,
 }
 
 struct State {
 	active_script: TrackedValue<Option<ActiveScript>>,
+	script_listener: mpsc::Sender<ScriptMessage>,
+
 	log: TrackedValue<String>,
 	input_display: InputDisplay,
 	config: Config,
@@ -67,6 +78,15 @@ impl State {
 					.map(|script| script.script.frames.len() as _)
 					.unwrap_or(0),
 			);
+			match script {
+				Some(script) => self
+					.script_listener
+					.blocking_send(ScriptMessage::Script(script.script.clone())),
+				None => self
+					.script_listener
+					.blocking_send(ScriptMessage::Stop { manual: false }),
+			}
+			.expect("script sender closed");
 		});
 
 		self.log.if_changed(|log| {
@@ -109,7 +129,7 @@ fn try_loading_script(path: &PathBuf, log: &mut String) -> Result<ActiveScript> 
 	match result {
 		Ok(script) => Ok(ActiveScript {
 			path: path.clone(),
-			script,
+			script: script.into(),
 		}),
 		Err(report) => {
 			log.push_str("server: failed to load script\n");
@@ -139,8 +159,12 @@ fn main() {
 
 	let window = MainWindow::new().unwrap();
 	let config = Config::load();
+	let (to_ui, mut from_server) = mpsc::unbounded_channel();
+	let (to_server, from_ui) = mpsc::unbounded_channel();
+	let (to_script_manager, from_state) = mpsc::channel(4);
 	let state = Rc::new(RefCell::new(State {
 		active_script: None.into(),
+		script_listener: to_script_manager.clone(),
 		log: String::new().into(),
 		input_display: InputDisplay::default().into(),
 		config,
@@ -149,6 +173,7 @@ fn main() {
 	}));
 
 	{
+		// load last used script from disk
 		let mut state = state.borrow_mut();
 		let script = state
 			.config
@@ -160,6 +185,7 @@ fn main() {
 		state.active_script.set(script);
 	};
 
+	// apply initial state changes including config and script
 	state.borrow_mut().apply_changes(&window, |_| {});
 
 	let window_weak = window.as_weak();
@@ -203,9 +229,23 @@ fn main() {
 		Image::from_rgba8(buffer.clone())
 	});
 
-	let (to_ui, mut from_server) = mpsc::unbounded_channel();
-	let (to_server, from_ui) = mpsc::unbounded_channel();
+	window.on_run_script({
+		let to_script_manager = to_script_manager.clone();
+		move || {
+			to_script_manager
+				.blocking_send(ScriptMessage::Start)
+				.expect("channel closed")
+		}
+	});
 
+	window.on_stop_script({
+		let to_script_manager = to_script_manager.clone();
+		move || {
+			to_script_manager
+				.blocking_send(ScriptMessage::Stop { manual: true })
+				.expect("channel closed")
+		}
+	});
 	window.on_pause_game({
 		let to_server = to_server.clone();
 		move || to_server.send(ToServer::PauseGame).expect("channel closed")
@@ -220,7 +260,16 @@ fn main() {
 		}
 	});
 
-	let _ = slint::spawn_local(async_compat::Compat::new(server_task(to_ui, from_ui)));
+	let handle = std::thread::spawn(move || {
+		let runtime = tokio::runtime::Builder::new_current_thread()
+			.enable_all()
+			.build()
+			.unwrap();
+		let _guard = runtime.enter();
+		tokio::spawn(script_sender(from_state, to_ui.clone(), to_server.clone()));
+		runtime.block_on(server_task(to_ui, from_ui));
+		panic!("server closed")
+	});
 	let window_weak = window.as_weak();
 	let _ = slint::spawn_local(async move {
 		let window = window_weak.unwrap();
@@ -237,6 +286,13 @@ fn main() {
 						state.log.get_mut().push_str(&message);
 						state.log.get_mut().push('\n');
 					});
+				}
+				server::ToUi::ClientConnected => {
+					if let Some(script) = state.borrow().active_script.get() {
+						to_script_manager
+							.blocking_send(ScriptMessage::Script(script.script.clone()))
+							.expect("channel closed");
+					}
 				}
 				server::ToUi::ClientError(report) => {
 					state
@@ -259,10 +315,25 @@ fn main() {
 						state.stage.set((stage_name.into(), scenario));
 					});
 				}
+				server::ToUi::FullFrameBuffer { server_index } => {
+					info!("backoff");
+					to_script_manager
+						.blocking_send(ScriptMessage::BackOff { server_index })
+						.expect("channel closed");
+				}
+				server::ToUi::ScriptPlaybackEnded => {
+					info!("playback ended");
+					to_script_manager
+						.blocking_send(ScriptMessage::Stop { manual: false })
+						.expect("channel closed");
+				}
 			}
 		}
 	})
 	.unwrap();
 
-	window.run().unwrap();
+	catch_unwind(AssertUnwindSafe(|| {
+		window.run().unwrap();
+	}));
+	handle.join();
 }

@@ -114,32 +114,64 @@ void Server::threadRecv() {
 hk::Result Server::handlePacket() {
 	if (mState != State::Connected) return hk::ResultSuccess();
 
-	Menu::log("checking for TCP packet...");
+	// Menu::log("checking for TCP packet...");
 
 	PacketHeader header;
 	if (recvAll((u8*)&header, sizeof(PacketHeader)) <= 0) return hk::ResultFailed();
 
-	Menu::log("received TCP packet: type %d, size %#x", header.type, header.size);
+	// Menu::log("received TCP packet: type %d, size %#x", header.type, header.size);
 
 	u8 body[header.size];
 	if (header.size > 0 && recvAll(body, header.size) <= 0) return hk::ResultFailed();
 
 	switch (header.type) {
 	case PacketHeader::cPacketType_Frame: {
-		FramePacket frame = *(FramePacket*)body;
+		FramePacket& frame = *cast<FramePacket*>(body);
+		if (!tas::System::isReplaying()) {
+			reportScriptCompleted();
+			break;
+		}
 
-		mFrameBuffer.pushBack(frame);
+		// Menu::log("frame %d %d", mFrameBuffer.count, mFrameBuffer.capacity);
+		if (mFrameBuffer.count == mFrameBuffer.capacity) {
+			// full! tell server to back off
 
-		Menu::log("frame buffer: %d/%d", mFrameBuffer.count, mFrameBuffer.capacity);
+			struct [[gnu::packed]] {
+				PacketHeader header;
+				u32 serverIndex;
+			} message = {
+				.header = { .type = PacketHeader::cPacketType_FullFrameBuffer, .size = 4 },
+				.serverIndex = frame.serverIndex,
+			};
+
+			sendTCPMessage(message);
+		} else {
+			mFrameBuffer.pushBack(frame);
+
+			// Menu::log("frame buffer: %d/%d", mFrameBuffer.count, mFrameBuffer.capacity);
+		}
 
 		break;
 	}
+	case PacketHeader::cPacketType_ScriptInfo:
+		Menu::log("got script!");
+		mFrameBuffer.clear();
+		tas::System::setScriptInfo(*cast<ScriptInfoPacket*>(body));
+		break;
+	case PacketHeader::cPacketType_StartScript: tas::System::startReplay(); break;
+	case PacketHeader::cPacketType_StopScript: tas::System::stopReplay(); break;
 	case PacketHeader::cPacketType_PauseGame: tas::Pauser::instance()->togglePause(); break;
 	case PacketHeader::cPacketType_AdvanceFrame: tas::Pauser::instance()->advanceFrame(); break;
 	default: break;
 	}
 
 	return hk::ResultSuccess();
+}
+
+bool Server::sendTCPMessage(hk::Span<const u8> data) {
+	s32 r = nn::socket::Send(mTCPSockFd, data.data(), data.size_bytes(), 0);
+	if (r < 0) disconnect();
+	return r >= 0;
 }
 
 s32 Server::sendUDPDatagram(Server::PacketHeader::PacketType type, hk::Span<const u8> data) {
@@ -181,7 +213,8 @@ void Server::sendUDPDiscoveryBroadcast() {
 
 	s32 r = nn::socket::SendTo(mUDPSockFd, &message, sizeof(message), 0x80, (sockaddr*)&serverAddr, sizeof(serverAddr));
 
-	HK_ABORT_UNLESS(r >= 0, "failed to send udp broadcast");
+	// todo: assertion crashes switch on sleep, look for relevant errno
+	// HK_ABORT_UNLESS(r >= 0, "failed to send udp broadcast");
 
 	serverAddr.sin_addr.s_addr = 0;
 	serverAddr.sin_family = nn::socket::InetHtons(AF_INET);
@@ -282,7 +315,7 @@ void Server::reportStageName(const sead::SafeString& stageName, s32 scenarioNo) 
 
 	memcpy(&message.stageName, stageName.cstr(), nameLen);
 
-	s32 r = nn::socket::Send(server->mTCPSockFd, &message, sizeof(PacketHeader) + message.header.size, 0);
+	server->sendTCPMessage(message);
 }
 
 void Server::reportPlayerPosition(const sead::Vector3f& position) {
@@ -291,8 +324,16 @@ void Server::reportPlayerPosition(const sead::Vector3f& position) {
 
 	hk::Span<const sead::Vector3f> span = { &position, 1 };
 	server->sendUDPDatagram(Server::PacketHeader::cPacketType_ReportPosition, cast<const u8>(span));
+}
 
-	// s32 r = nn::socket::Send(server->mTCPSockFd, &message, sizeof(message), 0);
+void Server::reportScriptCompleted() {
+	struct [[gnu::packed]] {
+		PacketHeader header;
+	} message = {
+		.header = { .type = PacketHeader::cPacketType_FullFrameBuffer, .size = 4 },
+	};
+
+	instance()->sendTCPMessage(message);
 }
 
 void Server::disconnect() {

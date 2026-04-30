@@ -2,7 +2,6 @@
 #include "hk/ro/RoUtil.h"
 #include "menu.h"
 #include "server.h"
-#include "smo/game/Scene/StageScene.h"
 #include "tas.h"
 
 #include <hk/Result.h>
@@ -25,6 +24,7 @@
 #include "al/Library/LiveActor/ActorPoseUtil.h"
 #include "al/Library/Memory/HeapUtil.h"
 #include "al/Library/Scene/Scene.h"
+#include "game/Scene/StageScene.h"
 #include "game/System/GameSystem.h"
 
 using namespace hk;
@@ -127,11 +127,12 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 
 	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
 		// player 1
-		cly::tas::InputFrame inputFrame;
-		cly::tas::System::tryReadCurFrame(&inputFrame);
-		controller->mPadHold = cly::tas::convertButtonsSTASToSead(inputFrame.padHold);
-		controller->mLeftStick.set(inputFrame.leftStick);
-		controller->mRightStick.set(inputFrame.rightStick);
+		cly::tas::System::tryReadCurFrame().map([&](cly::Server::FramePacket frame) {
+			controller->mPadHold = cly::tas::convertButtonsSTASToSead(frame.player1.buttons);
+			controller->mLeftStick.set({ f32(frame.player1.leftStick.x) / 32767.f, f32(frame.player1.leftStick.y) / 32767.f });
+			controller->mRightStick.set({ f32(frame.player1.rightStick.x) / 32767.f, f32(frame.player1.rightStick.y) / 32767.f });
+			return 0;
+		});
 	} else if (controller->mControllerMode == 1) {
 		// player 2
 	}

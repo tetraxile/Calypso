@@ -1,4 +1,4 @@
-use std::{borrow::Cow, pin::pin, sync::Arc};
+use std::{pin::pin, sync::Arc};
 
 use eyre::{Context, ContextCompat, Result, bail, eyre};
 use futures_util::future::{Either, select};
@@ -7,22 +7,29 @@ use tas_script_formats::glam::Vec3;
 use tokio::{
 	io::{AsyncReadExt, AsyncWriteExt},
 	net::{
-		TcpListener, TcpStream, UdpSocket,
+		TcpListener, UdpSocket,
 		tcp::{OwnedReadHalf, OwnedWriteHalf},
 	},
 	sync::{Mutex, mpsc},
 };
 use tokio_util::sync::CancellationToken;
+#[allow(unused_imports)]
 use tracing::{debug, error, info, warn};
-use zerocopy::{FromBytes, FromZeros, IntoBytes};
+use zerocopy::{FromBytes, FromZeros, IntoBytes, little_endian::U32};
 
-use crate::server::protocol::{Controller, PacketHeader, PacketType};
+use crate::server::protocol::{Controller, FramePacket, PacketHeader, PacketType, ScriptInfo};
 
-mod protocol;
+pub mod protocol;
 
 pub enum ToServer {
+	ScriptInfo {
+		frame_count: u32,
+		player_count: u8,
+		controller_types: [u8; 2],
+	},
 	Frame {
-		frame_idx: u32,
+		frame_index: u32,
+		server_index: u32,
 		player_1: Controller,
 		player_2: Controller,
 		amiibo: u64,
@@ -32,13 +39,17 @@ pub enum ToServer {
 	},
 	PauseGame,
 	AdvanceFrame,
+	StartScript,
+	StopScript,
 }
 
 pub enum ToUi {
 	Log(String),
 	SaveFile(Vec<u8>),
+	ClientConnected,
 	ClientError(eyre::Error),
-
+	FullFrameBuffer { server_index: u32 },
+	ScriptPlaybackEnded,
 	ReportStage { stage_name: String, scenario: i32 },
 	ReportPosition { position: Vec3 },
 }
@@ -72,6 +83,7 @@ pub async fn server_task(
 					server.clone(),
 					ui.clone(),
 				));
+				ui.send(ToUi::ClientConnected).expect("channel closed");
 			}
 			Err(error) => {
 				error!("failed to accept client: {error}");
@@ -147,6 +159,17 @@ async fn read_packet(stream: &mut OwnedReadHalf) -> Result<ToUi> {
 				scenario,
 			})
 		}
+		PacketType::FullFrameBuffer => {
+			let server_index = stream
+				.read_u32_le()
+				.await
+				.context("failed to read server index")?;
+			info!("server frame index: {server_index}");
+			Ok(ToUi::FullFrameBuffer { server_index })
+		}
+		PacketType::ScriptEnded => {
+			Ok(ToUi::ScriptPlaybackEnded)
+		}
 		packet_type => {
 			bail!("unexpected packet type: {packet_type:?}")
 		}
@@ -178,15 +201,61 @@ async fn handle_messages(
 
 async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Result<()> {
 	match message {
+		ToServer::ScriptInfo {
+			frame_count,
+			player_count,
+			controller_types,
+		} => {
+			client
+				.write_all(
+					PacketHeader {
+						packet_type: PacketType::ScriptInfo as _,
+						size: U32::new(size_of::<ScriptInfo>() as u32),
+					}
+					.as_bytes(),
+				)
+				.await
+				.context("failed to write script info packet header")?;
+			let mut script_info = ScriptInfo::new_zeroed();
+			script_info.frame_count = U32::new(frame_count);
+			script_info.player_count = player_count;
+			script_info.controller_types = controller_types;
+			client
+				.write_all(script_info.as_bytes())
+				.await
+				.context("failed to write script info")?;
+		}
 		ToServer::Frame {
-			frame_idx,
+			frame_index,
+			server_index,
 			player_1,
 			player_2,
 			amiibo,
 		} => {
-			warn!("not sending frames to client");
+			let packet = FramePacket {
+				frame_index: frame_index.into(),
+				server_index: server_index.into(),
+				player_1,
+				player_2,
+				amiibo: amiibo.into(),
+			};
+
+			client
+				.write_all(
+					PacketHeader {
+						packet_type: PacketType::Frame as _,
+						size: U32::new(size_of::<FramePacket>() as u32),
+					}
+					.as_bytes(),
+				)
+				.await
+				.context("failed to write script info packet header")?;
+			client
+				.write_all(packet.as_bytes())
+				.await
+				.context("failed to write frame count")?;
 		}
-		ToServer::GetSave { save_index } => {
+		ToServer::GetSave { save_index: _ } => {
 			warn!("not sending get save");
 		}
 		ToServer::PauseGame => client
@@ -208,8 +277,30 @@ async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Resul
 				.as_bytes(),
 			)
 			.await
-			.context("failed to write pause packet")?,
+			.context("failed to write advance packet")?,
+		ToServer::StartScript => client
+			.write_all(
+				PacketHeader {
+					packet_type: PacketType::StartScript as _,
+					size: 0.into(),
+				}
+				.as_bytes(),
+			)
+			.await
+			.context("failed to write start packet")?,
+		ToServer::StopScript => client
+			.write_all(
+				PacketHeader {
+					packet_type: PacketType::StopScript as _,
+					size: 0.into(),
+				}
+				.as_bytes(),
+			)
+			.await
+			.context("failed to write stop packet")?,
 	}
+
+	client.flush().await.context("failed to flush")?;
 
 	Ok(())
 }
@@ -263,9 +354,7 @@ async fn handle_udp_message(data: &[u8]) -> Result<UdpMessage> {
 		PacketType::ReportPosition => {
 			let (position, _) = Vec3::read_from_prefix(data)
 				.map_err(|_| eyre!("failed to read position report"))?;
-			Ok(UdpMessage::Ui(ToUi::ReportPosition {
-				position,
-			}))
+			Ok(UdpMessage::Ui(ToUi::ReportPosition { position }))
 		}
 		PacketType::UDPDiscovery => Ok(UdpMessage::DiscoveryReply),
 		packet_type => bail!("unexpected packet type: {packet_type:?}"),
