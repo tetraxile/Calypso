@@ -98,6 +98,15 @@ pub async fn script_sender(
 							}
 							tas_script_formats::Command::Touch(_) => todo!("touch unsupported"),
 							tas_script_formats::Command::Save => todo!("saves"),
+							tas_script_formats::Command::ChangeStage(change_stage) => to_server
+								.send(ToServer::ChangeStage(change_stage.clone()))
+								.expect("channel closed"),
+							tas_script_formats::Command::TeleportMario { position, rotation } => {
+								todo!()
+							}
+							tas_script_formats::Command::TeleportCappy { position, rotation } => {
+								todo!()
+							}
 							tas_script_formats::Command::Comment(_) => {}
 						}
 					}

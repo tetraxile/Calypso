@@ -1,5 +1,5 @@
 use bitfield_struct::bitfield;
-use glam::{IVec2, Mat3, Vec2, Vec3};
+use glam::{IVec2, Mat3, Quat, Vec2, Vec3};
 use num_derive::FromPrimitive;
 
 #[derive(Debug)]
@@ -8,6 +8,7 @@ pub struct Script {
 	pub seconds_spent_editing: Option<u32>,
 	pub is_two_player: bool,
 	pub controller_types: Vec<ControllerType>,
+	pub change_stage_info: Option<ChangeStage>,
 	pub frames: Vec<Frame>,
 }
 
@@ -97,12 +98,30 @@ impl Controller {
 	}
 }
 
+#[derive(Clone, Debug)]
+pub struct ChangeStage {
+ pub stage_name: String,
+ pub entrance_id: String,
+ pub scenario_no: i32,
+}
+
 #[derive(Debug)]
 pub enum Command {
 	Controller(Controller),
-	Amiibo { model_info: u64 },
+	Amiibo {
+		model_info: u64,
+	},
 	Touch(Vec<TouchEntry>),
 	Save,
+	ChangeStage(ChangeStage),
+	TeleportMario {
+		position: Vec3,
+		rotation: Quat,
+	},
+	TeleportCappy {
+		position: Vec3,
+		rotation: Quat,
+	},
 	Comment(String),
 }
 

@@ -28,3 +28,24 @@ SAVE FILE: command=0xc000
 offset  | size   | note
 --------+--------+-----------------------------------------
 0x0     |        | data (command size)
+
+CHANGE STAGE: command=0xc001
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 1 (+1) | scenario, i8 (range: -1..=15)
+0x2     | 2      | length of stage name (= n)
+        | n      | stage name (UTF-8)
+%0x4    | 2      | length of entrance id (= i)
+        | i      | entrance id (UTF-8)
+
+TELEPORT MARIO: command=0xc002
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 12     | mario's position, Vector3f
+0xc     | 16     | mario's rotation, Quat4f
+
+TELEPORT CAPPY: command=0xc003
+offset  | size   | note
+--------+--------+-----------------------------------------
+0x0     | 12     | cappy's position, Vector3f
+0xc     | 16     | cappy's rotation, Quat4f

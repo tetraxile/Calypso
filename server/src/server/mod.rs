@@ -3,7 +3,7 @@ use std::{pin::pin, sync::Arc};
 use eyre::{Context, ContextCompat, Result, bail, eyre};
 use futures_util::future::{Either, select};
 use num_traits::FromPrimitive;
-use tas_script_formats::glam::Vec3;
+use tas_script_formats::{ChangeStage, glam::Vec3};
 use tokio::{
 	io::{AsyncReadExt, AsyncWriteExt},
 	net::{
@@ -27,6 +27,7 @@ pub enum ToServer {
 		player_count: u8,
 		controller_types: [u8; 2],
 	},
+	ChangeStage(ChangeStage),
 	Frame {
 		frame_index: u32,
 		server_index: u32,
@@ -167,9 +168,7 @@ async fn read_packet(stream: &mut OwnedReadHalf) -> Result<ToUi> {
 			info!("server frame index: {server_index}");
 			Ok(ToUi::FullFrameBuffer { server_index })
 		}
-		PacketType::ScriptEnded => {
-			Ok(ToUi::ScriptPlaybackEnded)
-		}
+		PacketType::ScriptEnded => Ok(ToUi::ScriptPlaybackEnded),
 		packet_type => {
 			bail!("unexpected packet type: {packet_type:?}")
 		}
@@ -224,6 +223,46 @@ async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Resul
 				.write_all(script_info.as_bytes())
 				.await
 				.context("failed to write script info")?;
+		}
+		ToServer::ChangeStage(ChangeStage {
+			stage_name,
+			entrance_id,
+			scenario_no,
+		}) => {
+			client
+				.write_all(
+					PacketHeader {
+						packet_type: PacketType::ChangeStage as _,
+						size: U32::new((6 + stage_name.len() + 1 + entrance_id.len() + 1) as _),
+					}
+					.as_bytes(),
+				)
+				.await
+				.context("failed to write script info packet header")?;
+			client
+				.write_i32_le(scenario_no)
+				.await
+				.context("failed to write scenario no")?;
+			client
+				.write_u16_le(stage_name.len() as u16 + 1)
+				.await
+				.context("failed to write stage name length")?;
+			client
+				.write_all(stage_name.as_bytes())
+				.await
+				.context("failed to write stage name")?;
+			client
+				.write_u8(0)
+				.await
+				.context("failed to write stage name null terminator")?;
+			client
+				.write_all(entrance_id.as_bytes())
+				.await
+				.context("failed to write entrance id")?;
+			client
+				.write_u8(0)
+				.await
+				.context("failed to write entrance id null terminator")?;
 		}
 		ToServer::Frame {
 			frame_index,

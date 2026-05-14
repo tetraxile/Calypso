@@ -1,5 +1,5 @@
 use crate::util::align_stream;
-use crate::{ControllerType, Script, internal};
+use crate::{ChangeStage, ControllerType, Script, internal};
 use bitfield_struct::bitfield;
 use byteordered::byteorder::LittleEndian;
 use byteordered::{ByteOrdered, StaticEndianness};
@@ -85,7 +85,11 @@ enum CommandType {
 	Motion,
 	Amiibo,
 	Touch,
-	Comment = 32768,
+	Comment = 0x8000,
+	Save = 0xc000,
+	ChangeStage = 0xc001,
+	TeleportMario = 0xc002,
+	TeleportCappy = 0xc003,
 }
 
 #[derive(Debug, FromPrimitive)]
@@ -114,6 +118,11 @@ enum Command {
 		model_info: u64,
 	},
 	Touch(Vec<internal::TouchEntry>),
+	ChangeStage {
+		stage_name: String,
+		entrance_id: String,
+		scenario_no: i32,
+	},
 	Comment(String),
 }
 
@@ -241,6 +250,26 @@ fn parse_command(reader: &mut BinaryReader, format_version: u16) -> Result<Comma
 
 			Ok(Command::Touch(entries))
 		}
+		CommandType::Save => todo!("save file format is not documented yet"),
+		CommandType::ChangeStage => {
+			let scenario_no = reader.read_i8()?;
+			reader.seek_relative(1)?;
+
+			let mut stage_name = vec![0u8; reader.read_u16()? as usize];
+			reader.read_exact(&mut stage_name)?;
+			let stage_name = String::from_utf8(stage_name)?;
+			let mut entrance_id = vec![0u8; reader.read_u16()? as usize];
+			reader.read_exact(&mut entrance_id)?;
+			let entrance_id = String::from_utf8(entrance_id)?;
+
+			Ok(Command::ChangeStage {
+				stage_name,
+				entrance_id,
+				scenario_no: scenario_no as _,
+			})
+		}
+		CommandType::TeleportMario => todo!("teleporting"),
+		CommandType::TeleportCappy => todo!("teleporting"),
 		CommandType::Comment => {
 			let mut comment = vec![0u8; command_size];
 			reader.read_exact(&mut comment)?;
@@ -350,6 +379,7 @@ pub fn parse_stas(data: &[u8]) -> Result<Script> {
 
 	let mut last_frame_idx = 0;
 	let mut read_first_frame = false;
+	let mut start_change_stage_info = None;
 	let mut cur_stas_commands = vec![];
 
 	for _ in 0..(usize::min(stas_command_count, 200)) {
@@ -426,6 +456,27 @@ pub fn parse_stas(data: &[u8]) -> Result<Script> {
 						Command::Comment(message) => {
 							frame_commands.push(internal::Command::Comment(message));
 						}
+						Command::ChangeStage {
+							stage_name,
+							entrance_id,
+							scenario_no,
+						} => {
+							if read_first_frame {
+								frame_commands.push(internal::Command::ChangeStage(
+									ChangeStage {
+										stage_name,
+										entrance_id,
+										scenario_no,
+									},
+								));
+							} else {
+								start_change_stage_info = Some(ChangeStage {
+									stage_name,
+									entrance_id,
+									scenario_no,
+								})
+							}
+						}
 					}
 				}
 
@@ -447,15 +498,12 @@ pub fn parse_stas(data: &[u8]) -> Result<Script> {
 		};
 	}
 
-	// if let Some(frame) = cur_frame {
-	// 	frames.push(frame);
-	// }
-
 	Ok(Script {
 		author: author_name,
 		seconds_spent_editing: Some(seconds_edited),
 		is_two_player: player_count == 2,
 		controller_types,
+		change_stage_info: start_change_stage_info,
 		frames,
 	})
 }

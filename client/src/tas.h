@@ -76,9 +76,10 @@ class Pauser {
 	SEAD_SINGLETON_DISPOSER(Pauser);
 
 private:
-	bool mIsPaused = false;
+	std::atomic_bool mIsPaused = false;
 	bool mIsBlocked = false;
 	std::atomic<s32> mFrameAdvance = 0;
+	std::atomic<s32> mLoadDelay = 0;
 
 	bool isPaused() const { return mIsPaused || mIsBlocked; }
 
@@ -91,7 +92,7 @@ public:
 
 	void play() { mIsPaused = false; }
 
-	void togglePause() { mIsPaused ^= 1; }
+	void togglePause() { mIsPaused = !mIsPaused; }
 
 	void advanceFrame() { mFrameAdvance++; }
 

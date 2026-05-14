@@ -117,6 +117,7 @@ sead::BitFlag32 convertButtonsSTASToSead(sead::BitFlag64 stasPad) {
 				mask.setBit(sead::Controller::cPadIdx_Right);
 			else if (i == cSTAS_DDown)
 				mask.setBit(sead::Controller::cPadIdx_Down);
+			// no longer a part of odyssey's defined script format
 			// else if (i == cSTAS_LeftStickLeft)
 			// 	mask.setBit(sead::Controller::cPadIdx_LeftStickLeft);
 			// else if (i == cSTAS_LeftStickUp)

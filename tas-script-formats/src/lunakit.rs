@@ -1,6 +1,8 @@
-use crate::{ControllerType, Script, internal};
+use std::ffi::CStr;
+
+use crate::{ChangeStage, ControllerType, Script, internal};
 use bitfield_struct::bitfield;
-use eyre::{Result, ensure, eyre};
+use eyre::{Context, Result, ensure, eyre};
 use glam::{Mat3, Vec2, Vec3};
 use zerocopy::{Immutable, KnownLayout, TryFromBytes, little_endian::*};
 
@@ -141,6 +143,27 @@ pub fn parse_lunakit(data: &[u8]) -> Result<Script> {
 	let (header, rest) =
 		Header::try_ref_from_prefix(data).map_err(|_| eyre!("failed to parse script header"))?;
 
+	let change_stage_info = (header.change_stage_name[0] != 0)
+		.then(|| -> Result<ChangeStage> {
+			let stage_name = CStr::from_bytes_until_nul(&header.change_stage_name)
+				.context("stage name was not null terminated")?
+				.to_str()
+				.context("stage name was not utf-8")?
+				.to_owned();
+			let entrance_id = CStr::from_bytes_until_nul(&header.change_stage_id)
+				.context("entrance id was not null terminated")?
+				.to_str()
+				.context("stage name was not utf-8")?
+				.to_owned();
+
+			Ok(ChangeStage {
+				stage_name,
+				entrance_id,
+				scenario_no: header.scenario_no.get(),
+			})
+		})
+		.transpose()?;
+
 	let frames = <[Frame]>::try_ref_from_bytes_with_elems(rest, header.frame_count.get() as usize)
 		.map_err(|_| eyre!("failed to parse script frames"))?;
 
@@ -181,15 +204,11 @@ pub fn parse_lunakit(data: &[u8]) -> Result<Script> {
 		seconds_spent_editing: None,
 		is_two_player: header.is_two_player,
 		controller_types: if !header.is_two_player {
-			vec![
-				ControllerType::DualJoycon
-			]
+			vec![ControllerType::DualJoycon]
 		} else {
-			vec![
-				ControllerType::DualJoycon,
-				ControllerType::DualJoycon
-			]
+			vec![ControllerType::DualJoycon, ControllerType::DualJoycon]
 		},
+		change_stage_info,
 		frames,
 	})
 }
