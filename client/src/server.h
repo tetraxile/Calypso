@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <hk/container/Span.h>
 #include <hk/os/Event.h>
 #include <hk/types.h>
@@ -14,6 +15,8 @@
 #include <sead/math/seadVector.h>
 
 #include "al/Library/Thread/AsyncFunctorThread.h"
+#include "hk/container/FixedString.h"
+#include "smo/game/Sequence/ChangeStageInfo.h"
 
 namespace cly {
 
@@ -44,6 +47,8 @@ private:
 			cPacketType_StartScript,
 			cPacketType_StopScript,
 			cPacketType_ScriptEnded,
+			cPacketType_ChangeStage,
+			cPacketType_ReloadStage,
 		};
 
 		PacketType type;
@@ -78,6 +83,16 @@ public:
 		u8 playerCount;
 		u8 controllerTypes[2];
 	};
+
+	struct {
+		std::atomic_bool mHasChangeStageInfo = false;
+		std::atomic_bool mSimpleReload = false;
+		std::atomic_bool mIsReturn = false;
+		std::atomic<s32> mScenario = 0;
+		std::atomic<ChangeStageInfo::SubScenarioType> mSubScenario = ChangeStageInfo::NO_SUB_SCENARIO;
+		hk::FixedString<128> mStageName;
+		hk::FixedString<128> mEntranceName;
+	} changeStageInfo;
 
 private:
 	constexpr static s32 cPort = 8171;
@@ -122,9 +137,7 @@ public:
 		s32 head = 0;
 		FramePacket buf[60];
 
-		void clear() {
-			count = 0;
-		}
+		void clear() { count = 0; }
 
 		void pushBack(FramePacket& frame) {
 			buf[head++] = frame;

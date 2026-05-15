@@ -32,8 +32,10 @@ offset  | size   | note
 CHANGE STAGE: command=0xc001
 offset  | size   | note
 --------+--------+-----------------------------------------
-0x0     | 1 (+1) | scenario, i8 (range: -1..=15)
-0x2     | 2      | length of stage name (= n)
+0x0     | 1      | scenario, i8 (range: -1..=15)
+0x1     | 1      | sub scenario, i8 (range: 0..=4)
+0x2     | 1 (+1) | return to previous stage, bool
+0x4     | 2      | length of stage name (= n)
         | n      | stage name (UTF-8)
 %0x4    | 2      | length of entrance id (= i)
         | i      | entrance id (UTF-8)

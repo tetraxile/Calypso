@@ -100,28 +100,22 @@ impl Controller {
 
 #[derive(Clone, Debug)]
 pub struct ChangeStage {
- pub stage_name: String,
- pub entrance_id: String,
- pub scenario_no: i32,
+	pub stage_name: String,
+	pub entrance_id: String,
+	pub scenario_no: i32,
+	pub sub_scenario: u8,
+	pub is_return: bool,
 }
 
 #[derive(Debug)]
 pub enum Command {
 	Controller(Controller),
-	Amiibo {
-		model_info: u64,
-	},
+	Amiibo { model_info: u64 },
 	Touch(Vec<TouchEntry>),
 	Save,
 	ChangeStage(ChangeStage),
-	TeleportMario {
-		position: Vec3,
-		rotation: Quat,
-	},
-	TeleportCappy {
-		position: Vec3,
-		rotation: Quat,
-	},
+	TeleportMario { position: Vec3, rotation: Quat },
+	TeleportCappy { position: Vec3, rotation: Quat },
 	Comment(String),
 }
 

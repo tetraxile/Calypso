@@ -121,7 +121,9 @@ enum Command {
 	ChangeStage {
 		stage_name: String,
 		entrance_id: String,
-		scenario_no: i32,
+		scenario_no: i8,
+		sub_scenario: u8,
+		is_return: bool,
 	},
 	Comment(String),
 }
@@ -253,6 +255,8 @@ fn parse_command(reader: &mut BinaryReader, format_version: u16) -> Result<Comma
 		CommandType::Save => todo!("save file format is not documented yet"),
 		CommandType::ChangeStage => {
 			let scenario_no = reader.read_i8()?;
+			let sub_scenario = reader.read_u8()?;
+			let is_return = reader.read_u8()? > 0;
 			reader.seek_relative(1)?;
 
 			let mut stage_name = vec![0u8; reader.read_u16()? as usize];
@@ -265,7 +269,9 @@ fn parse_command(reader: &mut BinaryReader, format_version: u16) -> Result<Comma
 			Ok(Command::ChangeStage {
 				stage_name,
 				entrance_id,
-				scenario_no: scenario_no as _,
+				scenario_no,
+				sub_scenario,
+				is_return,
 			})
 		}
 		CommandType::TeleportMario => todo!("teleporting"),
@@ -460,20 +466,24 @@ pub fn parse_stas(data: &[u8]) -> Result<Script> {
 							stage_name,
 							entrance_id,
 							scenario_no,
+							sub_scenario,
+							is_return,
 						} => {
 							if read_first_frame {
-								frame_commands.push(internal::Command::ChangeStage(
-									ChangeStage {
-										stage_name,
-										entrance_id,
-										scenario_no,
-									},
-								));
+								frame_commands.push(internal::Command::ChangeStage(ChangeStage {
+									stage_name,
+									entrance_id,
+									scenario_no: scenario_no as _,
+									sub_scenario,
+									is_return,
+								}));
 							} else {
 								start_change_stage_info = Some(ChangeStage {
 									stage_name,
 									entrance_id,
-									scenario_no,
+									scenario_no: scenario_no as _,
+									sub_scenario,
+									is_return,
 								})
 							}
 						}

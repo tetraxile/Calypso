@@ -84,7 +84,9 @@ pub async fn server_task(
 					server.clone(),
 					ui.clone(),
 				));
-				ui.send(ToUi::ClientConnected).expect("channel closed");
+				if let Err(_) = ui.send(ToUi::ClientConnected) {
+					return;
+				}
 			}
 			Err(error) => {
 				error!("failed to accept client: {error}");
@@ -104,11 +106,12 @@ async fn handle_packets(
 		let cancelled = pin!(token.cancelled());
 		match select(read_packet, cancelled).await {
 			Either::Left((Ok(to_ui), _)) => {
-				ui.send(to_ui).expect("channel closed");
+				if let Err(_) = ui.send(to_ui) {
+					return;
+				}
 			}
 			Either::Left((Err(message), _)) => {
-				ui.send(ToUi::Log(format!("{message}\n")))
-					.expect("channel closed");
+				let _ = ui.send(ToUi::Log(format!("{message}\n")));
 				token.cancel();
 				return;
 			}
@@ -190,7 +193,9 @@ async fn handle_messages(
 				if let Err(error) =
 					handle_message(&mut stream, message.expect("channel closed")).await
 				{
-					ui.send(ToUi::ClientError(error)).expect("channel closed");
+					if let Err(_) = ui.send(ToUi::ClientError(error)) {
+						return;
+					}
 				}
 			}
 			Either::Right((_, _)) => return,
@@ -228,6 +233,8 @@ async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Resul
 			stage_name,
 			entrance_id,
 			scenario_no,
+			sub_scenario,
+			is_return,
 		}) => {
 			client
 				.write_all(
@@ -243,6 +250,14 @@ async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Resul
 				.write_i32_le(scenario_no)
 				.await
 				.context("failed to write scenario no")?;
+			client
+				.write_u8(sub_scenario)
+				.await
+				.context("failed to write sub scenario")?;
+			client
+				.write_u8(is_return as _)
+				.await
+				.context("failed to write is return")?;
 			client
 				.write_u16_le(stage_name.len() as u16 + 1)
 				.await
@@ -361,7 +376,11 @@ async fn udp_task(ui: mpsc::UnboundedSender<ToUi>) {
 		let buffer = &buffer[..size];
 
 		match handle_udp_message(buffer).await {
-			Ok(UdpMessage::Ui(to_ui)) => ui.send(to_ui).expect("channel closed"),
+			Ok(UdpMessage::Ui(to_ui)) => {
+				if let Err(_) = ui.send(to_ui) {
+					return;
+				}
+			}
 			Ok(UdpMessage::DiscoveryReply) => {
 				if 0 == udp
 					.send_to(b"hi", addr)

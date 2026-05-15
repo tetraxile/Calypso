@@ -101,10 +101,10 @@ pub async fn script_sender(
 							tas_script_formats::Command::ChangeStage(change_stage) => to_server
 								.send(ToServer::ChangeStage(change_stage.clone()))
 								.expect("channel closed"),
-							tas_script_formats::Command::TeleportMario { position, rotation } => {
+							tas_script_formats::Command::TeleportMario { position: _, rotation: _ } => {
 								todo!()
 							}
-							tas_script_formats::Command::TeleportCappy { position, rotation } => {
+							tas_script_formats::Command::TeleportCappy { position: _, rotation: _ } => {
 								todo!()
 							}
 							tas_script_formats::Command::Comment(_) => {}
@@ -145,7 +145,7 @@ pub async fn script_sender(
 						running = false;
 					}
 					ScriptMessage::Start => {
-						if current_script.is_some() {
+						if let Some(current_script) = &current_script {
 							running = true;
 							stopped = false;
 							to_server
@@ -157,9 +157,7 @@ pub async fn script_sender(
 						running = false;
 						stopped = true;
 						if !manual {
-							to_ui
-								.send(ToUi::ScriptPlaybackEnded)
-								.expect("channel closed")
+							let _ = to_ui.send(ToUi::ScriptPlaybackEnded);
 						}
 						current_frame = 0;
 						to_server

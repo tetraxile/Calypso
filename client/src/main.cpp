@@ -2,6 +2,8 @@
 #include "hk/ro/RoUtil.h"
 #include "menu.h"
 #include "server.h"
+#include "smo/game/Sequence/ChangeStageInfo.h"
+#include "smo/game/System/GameDataFunction.h"
 #include "tas.h"
 
 #include <hk/Result.h>
@@ -25,6 +27,7 @@
 #include "al/Library/Memory/HeapUtil.h"
 #include "al/Library/Scene/Scene.h"
 #include "game/Scene/StageScene.h"
+#include "game/Sequence/HakoniwaSequence.h"
 #include "game/System/GameSystem.h"
 
 using namespace hk;
@@ -84,6 +87,25 @@ HkTrampoline<void, GameSystem*> gameSystemUpdate = hk::hook::trampoline([](GameS
 	if (--discoveryTimer == 0) {
 		discoveryTimer = 30;
 		cly::Server::instance()->sendUDPDiscoveryBroadcast();
+	}
+
+	if (auto sequence = static_cast<HakoniwaSequence*>(gameSystem->mSequence)) {
+		auto server = cly::Server::instance();
+
+		auto gameDataHolder = (GameDataHolder*)sequence->mGameDataHolderAccessor;
+		if (server->changeStageInfo.mSimpleReload) {
+			cly::Server::log("restarting stage");
+			GameDataFunction::restartStage(gameDataHolder);
+		} else {
+			ChangeStageInfo info(
+				gameDataHolder, server->changeStageInfo.mEntranceName, server->changeStageInfo.mStageName, server->changeStageInfo.mIsReturn,
+				server->changeStageInfo.mScenario, server->changeStageInfo.mSubScenario
+			);
+
+			GameDataFunction::tryChangeNextStage(gameDataHolder, &info);
+			cly::Server::log("changing to stage %s", server->changeStageInfo.mStageName.data());
+		}
+		server->changeStageInfo.mHasChangeStageInfo = false;
 	}
 
 	// cly::tas::Pauser::instance()->update();

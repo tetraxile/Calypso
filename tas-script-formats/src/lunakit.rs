@@ -160,6 +160,8 @@ pub fn parse_lunakit(data: &[u8]) -> Result<Script> {
 				stage_name,
 				entrance_id,
 				scenario_no: header.scenario_no.get(),
+				sub_scenario: 0,
+				is_return: false,
 			})
 		})
 		.transpose()?;

@@ -76,6 +76,7 @@ void System::stopReplay() {
 		self->mIsReplaying = false;
 		self->mFrameIdx = 0;
 		self->mHasCurFrame = false;
+		Pauser::instance()->setBlocked(false);
 		Menu::log("stopped replaying");
 	}
 }

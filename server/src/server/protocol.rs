@@ -63,6 +63,7 @@ pub enum PacketType {
 	StopScript = 13,
 	ScriptEnded = 14,
 	ChangeStage = 15,
+	ReloadStage = 16,
 }
 
 #[derive(Debug, FromBytes, IntoBytes, KnownLayout, Immutable)]

@@ -92,8 +92,10 @@
                 stdenv = pkgsCross.aarch64-embedded.llvmPackages_20.stdenv;
               }
               rec {
-                nativeBuildInputs = build.dependencies ++ [
+                nativeBuildInputs = [
                   pkg-config
+                ];
+                buildInputs = build.dependencies ++ [
                 ];
                 LD_LIBRARY_PATH = lib.makeLibraryPath (
                   nativeBuildInputs

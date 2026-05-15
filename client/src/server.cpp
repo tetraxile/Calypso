@@ -1,9 +1,12 @@
 #include "server.h"
-#include "hk/container/Array.h"
 #include "hk/types.h"
 #include "menu.h"
+#include "smo/game/Sequence/ChangeStageInfo.h"
 #include "tas.h"
 
+#include "System/GameDataFunction.h"
+
+#include <hk/container/Array.h>
 #include <hk/diag/diag.h>
 #include <hk/hook/Trampoline.h>
 #include <hk/svc/api.h>
@@ -162,6 +165,32 @@ hk::Result Server::handlePacket() {
 	case PacketHeader::cPacketType_StopScript: tas::System::stopReplay(); break;
 	case PacketHeader::cPacketType_PauseGame: tas::Pauser::instance()->togglePause(); break;
 	case PacketHeader::cPacketType_AdvanceFrame: tas::Pauser::instance()->advanceFrame(); break;
+	case PacketHeader::cPacketType_ChangeStage: {
+		struct [[gnu::packed]] Start {
+			s32 scenario;
+			u8 subScenario;
+			bool isReturn;
+			u16 stageNameSize;
+		};
+
+		auto start = cast<Start*>(body);
+		auto stageName = cast<char*>(body + sizeof(Start));
+		auto entranceNameSize = *cast<u16*>(stageName + start->stageNameSize);
+		auto entranceName = cast<char*>(stageName + start->stageNameSize + 2);
+		changeStageInfo.mStageName = stageName;
+		changeStageInfo.mEntranceName = entranceName;
+		changeStageInfo.mScenario = start->scenario;
+		changeStageInfo.mSubScenario = static_cast<ChangeStageInfo::SubScenarioType>(start->subScenario);
+		changeStageInfo.mIsReturn = start->isReturn;
+		changeStageInfo.mSimpleReload = false;
+		changeStageInfo.mHasChangeStageInfo = true;
+		break;
+	}
+	case PacketHeader::cPacketType_ReloadStage: {
+		changeStageInfo.mSimpleReload = true;
+		changeStageInfo.mHasChangeStageInfo = true;
+		break;
+	}
 	default: break;
 	}
 
@@ -340,6 +369,7 @@ void Server::disconnect() {
 	Menu::log("disconnected from server");
 	mState = State::Disconnected;
 	nn::socket::Close(mTCPSockFd);
+	tas::System::stopReplay();
 }
 
 } // namespace cly
