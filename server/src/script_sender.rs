@@ -56,8 +56,8 @@ pub async fn script_sender(
 				)
 			})
 			.unwrap_or(Either::Right(pending()));
-		match select(pin!(sleep), pin!(from_ui.recv())).await {
-			Either::Left((_, _)) => {
+		match select(pin!(from_ui.recv()), pin!(sleep)).await {
+			Either::Right((_, _)) => {
 				back_off = None;
 				info!("sending frames {}", current_frame);
 
@@ -70,6 +70,12 @@ pub async fn script_sender(
 						running = false;
 						break;
 					};
+					let next_frame_index = script
+						.frames
+						.get(current_frame as usize + 1)
+						.map(|frame| frame.idx as u32)
+						.unwrap_or(u32::MAX);
+					// println!("{} {}", frame.idx, next_frame_index);
 
 					let mut player_1 = Controller::new_zeroed();
 					let mut player_2 = Controller::new_zeroed();
@@ -101,10 +107,16 @@ pub async fn script_sender(
 							tas_script_formats::Command::ChangeStage(change_stage) => to_server
 								.send(ToServer::ChangeStage(change_stage.clone()))
 								.expect("channel closed"),
-							tas_script_formats::Command::TeleportMario { position: _, rotation: _ } => {
+							tas_script_formats::Command::TeleportMario {
+								position: _,
+								rotation: _,
+							} => {
 								todo!()
 							}
-							tas_script_formats::Command::TeleportCappy { position: _, rotation: _ } => {
+							tas_script_formats::Command::TeleportCappy {
+								position: _,
+								rotation: _,
+							} => {
 								todo!()
 							}
 							tas_script_formats::Command::Comment(_) => {}
@@ -113,6 +125,7 @@ pub async fn script_sender(
 					to_server
 						.send(ToServer::Frame {
 							frame_index: frame.idx as u32,
+							next_frame_index,
 							server_index: current_frame,
 							player_1,
 							player_2,
@@ -122,9 +135,12 @@ pub async fn script_sender(
 					current_frame += 1;
 				}
 			}
-			Either::Right((message, _)) => {
+			Either::Left((message, _)) => {
 				info!("message to script sender {message:?}");
-				match message.expect("channel closed") {
+				let Some(message) = message else {
+					return;
+				};
+				match message {
 					ScriptMessage::Script(script) => {
 						to_server
 							.send(ToServer::ScriptInfo {
@@ -145,9 +161,16 @@ pub async fn script_sender(
 						running = false;
 					}
 					ScriptMessage::Start => {
-						if let Some(current_script) = &current_script {
+						if let Some(script) = &current_script {
 							running = true;
 							stopped = false;
+							if let Some(info) = script.change_stage_info.clone() {
+								to_server
+									.send(ToServer::ChangeStage(info))
+									.expect("channel closed");
+							} else {
+								// to_server.send(ToServer::ReloadStage).expect("channel closed");
+							}
 							to_server
 								.send(ToServer::StartScript)
 								.expect("channel closed");

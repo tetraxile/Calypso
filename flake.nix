@@ -67,6 +67,8 @@
               openssl
               fontconfig
               packages.cmake
+              nixfmt
+              llvmPackages_20.bintools-unwrapped
 
               # WINIT_UNIX_BACKEND=wayland
               wayland
@@ -86,24 +88,7 @@
               ]
             );
           };
-          cpp =
-            mkShellNoCC.override
-              {
-                stdenv = pkgsCross.aarch64-embedded.llvmPackages_20.stdenv;
-              }
-              rec {
-                nativeBuildInputs = [
-                  pkg-config
-                ];
-                buildInputs = build.dependencies ++ [
-                ];
-                LD_LIBRARY_PATH = lib.makeLibraryPath (
-                  nativeBuildInputs
-                  ++ [
-                    llvmPackages_20.clang-unwrapped.lib
-                  ]
-                );
-              };
+          cpp = build.devShell "client/sys";
         };
       }
     );

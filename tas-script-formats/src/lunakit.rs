@@ -133,6 +133,7 @@ struct Header {
 	signature: [u8; 4],
 	frame_count: U32,
 	is_two_player: bool,
+	_padding: [u8; 3],
 	scenario_no: I32,
 	change_stage_name: [u8; 0x80],
 	change_stage_id: [u8; 0x80],

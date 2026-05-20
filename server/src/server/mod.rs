@@ -15,7 +15,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 #[allow(unused_imports)]
 use tracing::{debug, error, info, warn};
-use zerocopy::{FromBytes, FromZeros, IntoBytes, little_endian::U32};
+use zerocopy::{FromBytes, FromZeros, IntoBytes, Unalign, little_endian::U32};
 
 use crate::server::protocol::{Controller, FramePacket, PacketHeader, PacketType, ScriptInfo};
 
@@ -28,8 +28,10 @@ pub enum ToServer {
 		controller_types: [u8; 2],
 	},
 	ChangeStage(ChangeStage),
+	ReloadStage,
 	Frame {
 		frame_index: u32,
+		next_frame_index: u32,
 		server_index: u32,
 		player_1: Controller,
 		player_2: Controller,
@@ -240,7 +242,9 @@ async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Resul
 				.write_all(
 					PacketHeader {
 						packet_type: PacketType::ChangeStage as _,
-						size: U32::new((6 + stage_name.len() + 1 + entrance_id.len() + 1) as _),
+						size: U32::new(
+							(4 + 1 + 1 + 2 + 2 + stage_name.len() + 1 + entrance_id.len() + 1) as _,
+						),
 					}
 					.as_bytes(),
 				)
@@ -263,6 +267,10 @@ async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Resul
 				.await
 				.context("failed to write stage name length")?;
 			client
+				.write_u16_le(entrance_id.len() as u16 + 1)
+				.await
+				.context("failed to write entrance id length")?;
+			client
 				.write_all(stage_name.as_bytes())
 				.await
 				.context("failed to write stage name")?;
@@ -279,8 +287,19 @@ async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Resul
 				.await
 				.context("failed to write entrance id null terminator")?;
 		}
+		ToServer::ReloadStage => client
+			.write_all(
+				PacketHeader {
+					packet_type: PacketType::ReloadStage as _,
+					size: 0.into(),
+				}
+				.as_bytes(),
+			)
+			.await
+			.context("failed to write pause packet")?,
 		ToServer::Frame {
 			frame_index,
+			next_frame_index,
 			server_index,
 			player_1,
 			player_2,
@@ -288,9 +307,10 @@ async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Resul
 		} => {
 			let packet = FramePacket {
 				frame_index: frame_index.into(),
+				next_frame_index: next_frame_index.into(),
 				server_index: server_index.into(),
-				player_1,
-				player_2,
+				player_1: Unalign::new(player_1),
+				player_2: Unalign::new(player_2),
 				amiibo: amiibo.into(),
 			};
 

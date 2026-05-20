@@ -4,8 +4,11 @@
 #include "server.h"
 #include "smo/game/Sequence/ChangeStageInfo.h"
 #include "smo/game/System/GameDataFunction.h"
+#include "smo/game/System/GameDataHolder.h"
+#include "smo/sead/controller/seadControllerDefine.h"
 #include "tas.h"
 
+#include <atomic>
 #include <hk/Result.h>
 #include <hk/diag/diag.h>
 #include <hk/gfx/DebugRenderer.h>
@@ -15,6 +18,7 @@
 #include <agl/common/aglDrawContext.h>
 #include <nn/fs.h>
 #include <nn/hid.h>
+#include <sead/controller/seadAccelerometerAddon.h>
 #include <sead/controller/seadControllerAddon.h>
 #include <sead/controller/seadControllerMgr.h>
 #include <sead/filedevice/seadFileDeviceMgr.h>
@@ -84,6 +88,8 @@ HkTrampoline<void, GameSystem*> gameSystemUpdate = hk::hook::trampoline([](GameS
 		gameSystemUpdate.orig(gameSystem);
 	}
 
+	cly::tas::System::checkForNextFrame();
+
 	if (--discoveryTimer == 0) {
 		discoveryTimer = 30;
 		cly::Server::instance()->sendUDPDiscoveryBroadcast();
@@ -92,20 +98,22 @@ HkTrampoline<void, GameSystem*> gameSystemUpdate = hk::hook::trampoline([](GameS
 	if (auto sequence = static_cast<HakoniwaSequence*>(gameSystem->mSequence)) {
 		auto server = cly::Server::instance();
 
-		auto gameDataHolder = (GameDataHolder*)sequence->mGameDataHolderAccessor;
-		if (server->changeStageInfo.mSimpleReload) {
-			cly::Server::log("restarting stage");
-			GameDataFunction::restartStage(gameDataHolder);
-		} else {
-			ChangeStageInfo info(
-				gameDataHolder, server->changeStageInfo.mEntranceName, server->changeStageInfo.mStageName, server->changeStageInfo.mIsReturn,
-				server->changeStageInfo.mScenario, server->changeStageInfo.mSubScenario
-			);
+		auto has = true;
+		if (server->changeStageInfo.mHasChangeStageInfo.compare_exchange_strong(has, false, std::memory_order_seq_cst, std::memory_order_relaxed)) {
+			GameDataHolder* gameDataHolder = sequence->mGameDataHolderAccessor;
+			if (server->changeStageInfo.mSimpleReload) {
+				cly::Server::log("NOT restarting stage (todo: reloads)");
+			} else {
+				ChangeStageInfo info(
+					gameDataHolder, server->changeStageInfo.mEntranceName, server->changeStageInfo.mStageName, server->changeStageInfo.mIsReturn,
+					server->changeStageInfo.mScenario, server->changeStageInfo.mSubScenario
+				);
 
-			GameDataFunction::tryChangeNextStage(gameDataHolder, &info);
-			cly::Server::log("changing to stage %s", server->changeStageInfo.mStageName.data());
+				GameDataFunction::tryChangeNextStage(gameDataHolder, &info);
+				cly::Server::log("changing to stage %s", server->changeStageInfo.mStageName.data());
+			}
+			server->changeStageInfo.mHasChangeStageInfo = false;
 		}
-		server->changeStageInfo.mHasChangeStageInfo = false;
 	}
 
 	// cly::tas::Pauser::instance()->update();
@@ -114,6 +122,7 @@ HkTrampoline<void, GameSystem*> gameSystemUpdate = hk::hook::trampoline([](GameS
 
 HkTrampoline<void, al::Scene*, const char*, s32> sceneInit = hk::hook::trampoline([](al::Scene* scene, const char* stageName, s32 scenario) -> void {
 	cly::Server::reportStageName(stageName, scenario);
+	cly::tas::Pauser::instance()->setWaitingOnLoad(false);
 	sceneInit.orig(scene, stageName, scenario);
 });
 
@@ -145,7 +154,6 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 	// 	controller->mRightStick.set(sead::Vector2f::zero);
 	// }
 
-	if (!cly::tas::System::isReplaying()) return;
 
 	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
 		// player 1
@@ -153,6 +161,12 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 			controller->mPadHold = cly::tas::convertButtonsSTASToSead(frame.player1.buttons);
 			controller->mLeftStick.set({ f32(frame.player1.leftStick.x) / 32767.f, f32(frame.player1.leftStick.y) / 32767.f });
 			controller->mRightStick.set({ f32(frame.player1.rightStick.x) / 32767.f, f32(frame.player1.rightStick.y) / 32767.f });
+			auto applyAccel = [&](s32 index, const sead::Vector3f& accel) {
+				auto addon = (sead::AccelerometerAddon*)controller->getAddonByOrder(sead::ControllerDefine::cAddon_Accelerometer, index);
+				addon->mAcceleration.set(accel);
+			};
+			applyAccel(0, frame.player1.accelLeft);
+			if (cly::tas::System::isDualJoycons(0)) applyAccel(1, frame.player1.accelRight);
 			return 0;
 		});
 	} else if (controller->mControllerMode == 1) {

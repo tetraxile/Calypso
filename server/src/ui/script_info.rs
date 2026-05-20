@@ -105,6 +105,9 @@ impl State {
 					ui.label("Start entrance");
 					ui.label(change_stage_info.entrance_id.to_string());
 					ui.end_row();
+				} else {
+					ui.label("No specified start entrance");
+					ui.end_row();
 				}
 			});
 		}

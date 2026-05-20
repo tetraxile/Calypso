@@ -60,7 +60,7 @@ private:
 	};
 
 public:
-	struct Controller {
+	struct [[gnu::packed]] Controller {
 		u64 buttons;
 		sead::Vector2i leftStick;
 		sead::Vector2i rightStick;
@@ -70,8 +70,9 @@ public:
 		sead::Vector3f gyroRight;
 	};
 
-	struct FramePacket {
+	struct [[gnu::packed]] FramePacket {
 		u32 frameIndex;
+		u32 nextFrameIndex;
 		u32 serverIndex;
 		Controller player1;
 		Controller player2;
@@ -131,28 +132,29 @@ public:
 	static void reportPlayerPosition(const sead::Vector3f& position);
 	static void reportScriptCompleted();
 
-	struct {
-		s32 count = 0;
-		s32 capacity = 60;
-		s32 head = 0;
-		FramePacket buf[60];
+	struct FrameBuffer {
+		constexpr static s32 capacity = 60;
+		std::atomic<u32> count = 0;
+		std::atomic<u32> readHead = 0;
+		std::atomic<u32> writeHead = 0;
+		FramePacket buf[capacity];
 
-		void clear() { count = 0; }
+		void clear() { count = 0; readHead = 0; writeHead = 0; }
 
-		void pushBack(FramePacket& frame) {
-			buf[head++] = frame;
+		void push(FramePacket& frame) {
+			if (count >= capacity) return;
+			buf[writeHead++] = frame;
+			if (writeHead >= capacity) writeHead -= capacity;
 			count++;
-			if (head >= capacity) head -= capacity;
 		}
 
-		hk::ValueOrResult<FramePacket> popBack() {
+		hk::ValueOrResult<FramePacket> pop() {
 			if (count <= 0) return hk::ResultNoValue();
 
+			auto packet = buf[readHead++];
+			if (readHead >= capacity) readHead -= capacity;
 			count--;
-			head--;
-			if (head < 0) head += capacity;
-			FramePacket frame = buf[head];
-			return frame;
+			return packet;
 		}
 	} mFrameBuffer;
 };

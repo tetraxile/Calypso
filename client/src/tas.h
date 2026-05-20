@@ -54,8 +54,9 @@ private:
 	sead::Heap* mHeap = nullptr;
 	Server::ScriptInfoPacket mScriptInfo;
 	u32 mFrameIdx = 0;
+	u32 mNextFrameIdx = 0;
 	bool mIsReplaying = false;
-	bool mHasCurFrame = true;
+	bool mHasCurFrame = false;
 	Server::FramePacket mCurFrame;
 
 public:
@@ -63,13 +64,24 @@ public:
 	void init(sead::Heap* heap);
 	static void startReplay();
 	static void stopReplay();
+
 	static bool isReplaying() { return instance()->mIsReplaying; }
+
+	static bool isApplyingInput();
+
 	static u32 getFrameIndex() { return instance()->mFrameIdx; };
+
+	static u32 getServerIndex() { return instance()->mCurFrame.serverIndex; };
+
 	static u32 getFrameCount() { return instance()->mScriptInfo.frameCount; };
+
+	static void checkForNextFrame();
 	static void getNextFrame();
 	static hk::ValueOrResult<Server::FramePacket> tryReadCurFrame();
 
 	static void setScriptInfo(Server::ScriptInfoPacket scriptInfo) { instance()->mScriptInfo = scriptInfo; }
+
+	static bool isDualJoycons(s32 index) { return instance()->mScriptInfo.controllerTypes[index] == 3; }
 };
 
 class Pauser {
@@ -78,6 +90,7 @@ class Pauser {
 private:
 	std::atomic_bool mIsPaused = false;
 	bool mIsBlocked = false;
+	std::atomic_bool mWaitingOnLoad = false;
 	std::atomic<s32> mFrameAdvance = 0;
 	std::atomic<s32> mLoadDelay = 0;
 
@@ -85,6 +98,14 @@ private:
 
 public:
 	Pauser() = default;
+
+	bool isBlocked() const { return mIsBlocked; }
+
+	bool isWaitingOnLoad() const { return mWaitingOnLoad; }
+
+	bool isManuallyPaused() const { return mIsPaused; }
+
+	void setWaitingOnLoad(bool waiting) { mWaitingOnLoad = waiting; }
 
 	void setBlocked(bool isBlocked) { mIsBlocked = isBlocked; }
 
@@ -96,7 +117,7 @@ public:
 
 	void advanceFrame() { mFrameAdvance++; }
 
-	bool isSequenceActive() const { return !isPaused() || (mFrameAdvance != 0); }
+	bool isSequenceActive() const { return !isPaused() || isWaitingOnLoad() || (mFrameAdvance != 0); }
 
 	void update() {
 		if (mFrameAdvance > 0 && !mIsBlocked) {

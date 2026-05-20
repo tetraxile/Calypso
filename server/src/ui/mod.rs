@@ -115,9 +115,9 @@ impl State {
 		state
 	}
 
-	fn monospace_scope<R>(&self, ui: &mut Ui, func: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {
+	fn monospace_scope<R>(font_id: FontId, ui: &mut Ui, func: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {
 		ui.scope(|ui| {
-			ui.style_mut().override_font_id = Some(self.monospace.clone());
+			ui.style_mut().override_font_id = Some(font_id);
 			func(ui)
 		})
 	}
@@ -153,10 +153,20 @@ impl State {
 
 		while let Ok(message) = self.ui_receiver.try_recv() {
 			match message {
-				ToUi::Log(log_message) => self.log.push_str(&log_message),
+				ToUi::Log(log_message) => {
+					writeln!(&mut self.log, "{log_message}").unwrap();
+				}
 				ToUi::SaveFile(_) => {}
-				ToUi::ClientConnected => {}
-				ToUi::ClientError(report) => {}
+				ToUi::ClientConnected => {
+					if let Some(script) = self.active_script.get() {
+						self.script_sender
+							.blocking_send(ScriptMessage::Script(script.script.clone()))
+							.expect("channel closed");
+					}
+				}
+				ToUi::ClientError(report) => {
+					self.log.push_str(&format!("{}\n", report));
+				}
 				ToUi::FullFrameBuffer { server_index } => self
 					.script_sender
 					.blocking_send(ScriptMessage::BackOff { server_index })

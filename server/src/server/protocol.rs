@@ -4,8 +4,7 @@ use tas_script_formats::{
 	glam::{IVec2, Vec3},
 };
 use zerocopy::{
-	FromBytes, Immutable, IntoBytes, KnownLayout,
-	little_endian::{U32, U64},
+	FromBytes, Immutable, IntoBytes, KnownLayout, Unalign, little_endian::{U32, U64}
 };
 
 #[derive(FromBytes, IntoBytes, KnownLayout, Immutable)]
@@ -21,12 +20,13 @@ pub struct Controller {
 }
 
 #[derive(FromBytes, IntoBytes, KnownLayout, Immutable)]
-#[repr(C)]
+#[repr(C, align(4))]
 pub struct FramePacket {
 	pub frame_index: U32,
+	pub next_frame_index: U32,
 	pub server_index: U32,
-	pub player_1: Controller,
-	pub player_2: Controller,
+	pub player_1: Unalign<Controller>,
+	pub player_2: Unalign<Controller>,
 	pub amiibo: U64,
 }
 

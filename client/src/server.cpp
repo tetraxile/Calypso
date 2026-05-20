@@ -144,12 +144,12 @@ hk::Result Server::handlePacket() {
 				u32 serverIndex;
 			} message = {
 				.header = { .type = PacketHeader::cPacketType_FullFrameBuffer, .size = 4 },
-				.serverIndex = frame.serverIndex,
+				.serverIndex = tas::System::getServerIndex(),
 			};
 
 			sendTCPMessage(message);
 		} else {
-			mFrameBuffer.pushBack(frame);
+			mFrameBuffer.push(frame);
 
 			// Menu::log("frame buffer: %d/%d", mFrameBuffer.count, mFrameBuffer.capacity);
 		}
@@ -166,17 +166,21 @@ hk::Result Server::handlePacket() {
 	case PacketHeader::cPacketType_PauseGame: tas::Pauser::instance()->togglePause(); break;
 	case PacketHeader::cPacketType_AdvanceFrame: tas::Pauser::instance()->advanceFrame(); break;
 	case PacketHeader::cPacketType_ChangeStage: {
+		Server::log("more logging");
+
 		struct [[gnu::packed]] Start {
 			s32 scenario;
 			u8 subScenario;
 			bool isReturn;
 			u16 stageNameSize;
+			u16 entranceNameSize;
 		};
 
 		auto start = cast<Start*>(body);
+		Server::log("%d %d %d %d", start->scenario, start->stageNameSize, start->isReturn, start->subScenario);
 		auto stageName = cast<char*>(body + sizeof(Start));
-		auto entranceNameSize = *cast<u16*>(stageName + start->stageNameSize);
-		auto entranceName = cast<char*>(stageName + start->stageNameSize + 2);
+		auto entranceName = cast<char*>(stageName + start->stageNameSize);
+		Server::log("%s %s", stageName, entranceName);
 		changeStageInfo.mStageName = stageName;
 		changeStageInfo.mEntranceName = entranceName;
 		changeStageInfo.mScenario = start->scenario;
@@ -184,11 +188,13 @@ hk::Result Server::handlePacket() {
 		changeStageInfo.mIsReturn = start->isReturn;
 		changeStageInfo.mSimpleReload = false;
 		changeStageInfo.mHasChangeStageInfo = true;
+		tas::Pauser::instance()->setWaitingOnLoad(true);
 		break;
 	}
 	case PacketHeader::cPacketType_ReloadStage: {
-		changeStageInfo.mSimpleReload = true;
-		changeStageInfo.mHasChangeStageInfo = true;
+		// not currently implemented properly
+		// changeStageInfo.mSimpleReload = true;
+		// changeStageInfo.mHasChangeStageInfo = true;
 		break;
 	}
 	default: break;

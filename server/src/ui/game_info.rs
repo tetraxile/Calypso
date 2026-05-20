@@ -12,15 +12,17 @@ impl State {
 			.show(ui, |ui| {
 				if let Some((stage_name, scenario)) = &self.stage {
 					ui.label("Stage");
-					self.monospace_scope(ui, |ui| ui.label(stage_name));
+					Self::monospace_scope(self.monospace.clone(), ui, |ui| ui.label(stage_name));
 					ui.end_row();
 					ui.label("Scenario");
-					self.monospace_scope(ui, |ui| ui.label(scenario.to_string()));
+					Self::monospace_scope(self.monospace.clone(), ui, |ui| {
+						ui.label(scenario.to_string())
+					});
 					ui.end_row();
 				}
 				if let Some(Vec3 { x, y, z }) = &self.player_position {
 					ui.label("Player Position");
-					self.monospace_scope(ui, |ui| {
+					Self::monospace_scope(self.monospace.clone(), ui, |ui| {
 						ui.label(format!("{x:>10.4} {y:>10.4} {z:>10.4}"))
 					});
 					ui.end_row();

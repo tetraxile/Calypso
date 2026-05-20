@@ -17,45 +17,58 @@ void System::init(sead::Heap* heap) {
 	mHeap = heap;
 }
 
-void System::getNextFrame() {
+bool System::isApplyingInput() {
+	return isReplaying() && !Pauser::instance()->isWaitingOnLoad();
+}
+
+void System::checkForNextFrame() {
 	System* self = instance();
-	Pauser::instance()->setBlocked(false);
-	if (!self->isReplaying()) {
-		Menu::log("ERROR: no script loaded");
-		return;
-	}
+	if (!self->isReplaying()) return;
 
 	if (self->mFrameIdx >= self->mScriptInfo.frameCount) {
 		if (self->mFrameIdx == self->mScriptInfo.frameCount) {
 			self->mFrameIdx++;
-			Menu::log("script ended?");
+			Menu::log("script ended? %d %d", self->mFrameIdx, self->mScriptInfo.frameCount);
 			Server::reportScriptCompleted();
 			self->stopReplay();
 		}
 		return;
 	}
 
-	if (!self->mHasCurFrame || self->mCurFrame.frameIndex <= self->mFrameIdx) {
-		auto result = Server::instance()->mFrameBuffer.popBack();
-		if (!result.hasValue()) {
-			Pauser::instance()->setBlocked(true);
-			return;
+	if (!self->mHasCurFrame) {
+		for (int i = 0; i < 30; i++) {
+			auto result = Server::instance()->mFrameBuffer.pop();
+			if (!result.hasValue()) {
+				Pauser::instance()->setBlocked(true);
+				break;
+			}
+
+			self->mCurFrame = HK_UNWRAP(result);
+			if (self->mCurFrame.frameIndex != self->mNextFrameIdx) {
+				continue;
+			}
+
+			self->mHasCurFrame = true;
+			Pauser::instance()->setBlocked(false);
+			self->mNextFrameIdx = self->mCurFrame.nextFrameIndex;
+			break;
 		}
-
-		self->mCurFrame = HK_UNWRAP(result);
-		self->mHasCurFrame = true;
 	}
+}
 
-	Menu::log("%03d: %016lx %016lx", self->mFrameIdx, self->mCurFrame.player1.buttons);
-	self->mFrameIdx++;
+void System::getNextFrame() {
+	System* self = instance();
+	if (isApplyingInput() && self->mHasCurFrame) {
+		if (self->mFrameIdx < self->mNextFrameIdx) self->mFrameIdx++;
+	}
 }
 
 hk::ValueOrResult<Server::FramePacket> System::tryReadCurFrame() {
 	System* self = instance();
 
-	bool isReplay = self->isReplaying();
-	if (isReplay) {
+	if (isApplyingInput() && self->mHasCurFrame && self->mCurFrame.frameIndex == self->mFrameIdx) {
 		self->mHasCurFrame = false;
+		Menu::log("%04d->%04d: %016lx %06d %06d", self->mFrameIdx, self->mCurFrame.nextFrameIndex, self->mCurFrame.player1.buttons, self->mCurFrame.player1.leftStick.x, self->mCurFrame.player1.leftStick.y);
 		return self->mCurFrame;
 	}
 
@@ -65,8 +78,12 @@ hk::ValueOrResult<Server::FramePacket> System::tryReadCurFrame() {
 void System::startReplay() {
 	System* self = instance();
 	if (self->mIsReplaying) return;
+	Server::instance()->mFrameBuffer.clear();
 
 	self->mIsReplaying = true;
+	self->mFrameIdx = 0;
+	self->mNextFrameIdx = 0;
+	self->mCurFrame.serverIndex = 0;
 	Menu::log("started replaying");
 }
 
@@ -76,7 +93,9 @@ void System::stopReplay() {
 		self->mIsReplaying = false;
 		self->mFrameIdx = 0;
 		self->mHasCurFrame = false;
+		self->mCurFrame.serverIndex = 0;
 		Pauser::instance()->setBlocked(false);
+		Server::instance()->mFrameBuffer.clear();
 		Menu::log("stopped replaying");
 	}
 }
