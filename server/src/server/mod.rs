@@ -240,10 +240,10 @@ async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Resul
 				.write_all(
 					PacketHeader {
 						packet_type: PacketType::ChangeStage as _,
-						size: U32::new((6 + stage_name.len() + 1 + entrance_id.len() + 1) as _),
+						size: U32::new((4 + 2 + 2 + stage_name.len() + 1 + entrance_id.len() + 1) as _),
 					}
 					.as_bytes(),
-				)
+				) 
 				.await
 				.context("failed to write script info packet header")?;
 			client

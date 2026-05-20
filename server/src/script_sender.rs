@@ -56,8 +56,8 @@ pub async fn script_sender(
 				)
 			})
 			.unwrap_or(Either::Right(pending()));
-		match select(pin!(sleep), pin!(from_ui.recv())).await {
-			Either::Left((_, _)) => {
+		match select(pin!(from_ui.recv()), pin!(sleep)).await {
+			Either::Right((_, _)) => {
 				back_off = None;
 				info!("sending frames {}", current_frame);
 
@@ -122,9 +122,12 @@ pub async fn script_sender(
 					current_frame += 1;
 				}
 			}
-			Either::Right((message, _)) => {
+			Either::Left((message, _)) => {
 				info!("message to script sender {message:?}");
-				match message.expect("channel closed") {
+				let Some(message) = message else {
+					return;
+				};
+				match message {
 					ScriptMessage::Script(script) => {
 						to_server
 							.send(ToServer::ScriptInfo {
@@ -145,7 +148,7 @@ pub async fn script_sender(
 						running = false;
 					}
 					ScriptMessage::Start => {
-						if let Some(current_script) = &current_script {
+						if current_script.is_some() {
 							running = true;
 							stopped = false;
 							to_server
