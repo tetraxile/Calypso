@@ -3,7 +3,6 @@ v0 -> v1:
 - Increase COMMAND.size to 0x6 (48 Bits)
 - Add 32768=COMMENT
 - Adjust how controller types are stored in the header (constant array of enums)
-- Add game-specific header to script header
 - For CONTROLLER (command=1): Decrease buttons to 0x7, pack closer to sizeof(CONTROLLER)=0x18
 
 
@@ -35,8 +34,6 @@ offset  | size   | note
         | s      | script title (UTF-8)
 %0x4    | 4      | length of description (= d)
         | d      | description (UTF-8)
-%0x4    | 8      | size of game-header (= p)
-        | p      | game-header information
 %0x4 (end, pad with 0-bytes if necessary)
 
 
