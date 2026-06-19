@@ -5,6 +5,7 @@
 #include "smo/game/Sequence/ChangeStageInfo.h"
 #include "smo/game/System/GameDataFunction.h"
 #include "smo/game/System/GameDataHolder.h"
+#include "smo/game/System/GameDataHolderAccessor.h"
 #include "smo/sead/controller/seadControllerDefine.h"
 #include "tas.h"
 
@@ -180,6 +181,11 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 //     out->y = 0.0f;
 // });
 
+HkTrampoline<bool, GameDataHolderAccessor, ShineInfo*> isGotShineHook = hk::hook::trampoline([](GameDataHolderAccessor accessor, ShineInfo* info) {
+	if (false) return isGotShineHook.orig(accessor, info);
+	return false;
+});
+
 extern "C" void hkMain() {
 	hk::gfx::DebugRenderer::instance()->installHooks();
 	gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
@@ -189,5 +195,6 @@ extern "C" void hkMain() {
 	sceneUpdate.installAtSym<"_ZN2al5Scene8movementEv">();
 	inputHook.installAtSym<"_ZN2al14NpadController9calcImpl_Ev">();
 	fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
+	isGotShineHook.installAtSym<"_ZN16GameDataFunction10isGotShineE22GameDataHolderAccessorPK9ShineInfo">();
 	hook::a64::assemble<"mov x0, #1\nsvc #0x28">().installAtOffset(ro::getRtldModule(), 0);
 }
