@@ -60,6 +60,7 @@ void System::getNextFrame() {
 	System* self = instance();
 	if (isApplyingInput() && self->mHasCurFrame) {
 		if (self->mFrameIdx < self->mNextFrameIdx) self->mFrameIdx++;
+		self->mHasCurFrame = false;
 	}
 }
 
@@ -67,7 +68,6 @@ hk::ValueOrResult<Server::FramePacket> System::tryReadCurFrame() {
 	System* self = instance();
 
 	if (isApplyingInput() && self->mHasCurFrame && self->mCurFrame.frameIndex == self->mFrameIdx) {
-		self->mHasCurFrame = false;
 		Menu::log("%04d->%04d: %016lx %06d %06d", self->mFrameIdx, self->mCurFrame.nextFrameIndex, self->mCurFrame.player1.buttons, self->mCurFrame.player1.leftStick.x, self->mCurFrame.player1.leftStick.y);
 		return self->mCurFrame;
 	}
