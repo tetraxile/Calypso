@@ -1,5 +1,4 @@
 mod config;
-mod input_display;
 mod script_sender;
 mod server;
 mod tracked_value;

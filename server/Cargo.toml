@@ -22,3 +22,6 @@ toml = "1.1.2"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 zerocopy = { version = "0.8.48", features = ["derive"] }
+
+[dev-dependencies]
+rayon = "1.12.0"

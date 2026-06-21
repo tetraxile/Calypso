@@ -17,7 +17,9 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 use zerocopy::{FromBytes, FromZeros, IntoBytes, Unalign, little_endian::U32};
 
-use crate::server::protocol::{Controller, FramePacket, PacketHeader, PacketType, ScriptInfo};
+use crate::server::protocol::{
+	Controller, FramePacket, InputReport, PacketHeader, PacketType, ScriptInfo,
+};
 
 pub mod protocol;
 
@@ -55,6 +57,7 @@ pub enum ToUi {
 	ScriptPlaybackEnded,
 	ReportStage { stage_name: String, scenario: i32 },
 	ReportPosition { position: Vec3 },
+	InputReport(InputReport),
 }
 
 pub async fn server_task(
@@ -433,6 +436,12 @@ async fn handle_udp_message(data: &[u8]) -> Result<UdpMessage> {
 			let (position, _) = Vec3::read_from_prefix(data)
 				.map_err(|_| eyre!("failed to read position report"))?;
 			Ok(UdpMessage::Ui(ToUi::ReportPosition { position }))
+		}
+		PacketType::ReportInput => {
+			let (input, _) = InputReport::read_from_prefix(data)
+				.map_err(|_| eyre!("failed to read input report"))?;
+
+			Ok(UdpMessage::Ui(ToUi::InputReport(input)))
 		}
 		PacketType::UDPDiscovery => Ok(UdpMessage::DiscoveryReply),
 		packet_type => bail!("unexpected packet type: {packet_type:?}"),

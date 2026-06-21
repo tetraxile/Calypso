@@ -75,8 +75,8 @@ impl InputDisplay {
 	#[allow(unused)]
 	pub fn update(&mut self, buttons: Buttons, left_stick: IVec2, right_stick: IVec2) {
 		self.buttons = buttons;
-		self.left_stick = todo!("calculation: {}", left_stick.as_vec2());
-		self.right_stick = todo!("calculation: {}", right_stick.as_vec2());
+		self.left_stick = left_stick.as_vec2() / i16::MAX as f32;
+		self.right_stick = right_stick.as_vec2() / i16::MAX as f32;
 	}
 
 	pub fn paint(&mut self, size: Vec2) {

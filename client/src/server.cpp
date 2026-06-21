@@ -1,6 +1,7 @@
 #include "server.h"
 #include "hk/types.h"
 #include "menu.h"
+#include "smo/NintendoSDK/nn/hid.h"
 #include "smo/game/Sequence/ChangeStageInfo.h"
 #include "tas.h"
 
@@ -359,6 +360,14 @@ void Server::reportPlayerPosition(const sead::Vector3f& position) {
 
 	hk::Span<const sead::Vector3f> span = { &position, 1 };
 	server->sendUDPDatagram(Server::PacketHeader::cPacketType_ReportPosition, cast<const u8>(span));
+}
+
+void Server::reportInput(const nn::hid::NpadJoyDualState& position) {
+	Server* server = instance();
+	if (!server || server->mState != State::Connected) return;
+
+	hk::Span<const nn::hid::NpadJoyDualState> span = { &position, 1 };
+	server->sendUDPDatagram(Server::PacketHeader::cPacketType_ReportInput, cast<const u8>(span));
 }
 
 void Server::reportScriptCompleted() {

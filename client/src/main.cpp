@@ -155,7 +155,6 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 	// 	controller->mRightStick.set(sead::Vector2f::zero);
 	// }
 
-
 	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
 		// player 1
 		cly::tas::System::tryReadCurFrame().map([&](cly::Server::FramePacket frame) {
@@ -185,6 +184,13 @@ HkTrampoline<bool, GameDataHolderAccessor, ShineInfo*> isGotShineHook = hk::hook
 	if (false) return isGotShineHook.orig(accessor, info);
 	return false;
 });
+HkTrampoline<void, nn::hid::NpadJoyDualState*, s32, const u32&> stickTestHook =
+	hk::hook::trampoline([](nn::hid::NpadJoyDualState* states, s32 count, const u32& port) {
+		stickTestHook.orig(states, count, port);
+		if (count >= 1) {
+			cly::Server::reportInput(states[0]);
+		}
+	});
 
 extern "C" void hkMain() {
 	hk::gfx::DebugRenderer::instance()->installHooks();
@@ -196,5 +202,6 @@ extern "C" void hkMain() {
 	inputHook.installAtSym<"_ZN2al14NpadController9calcImpl_Ev">();
 	fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
 	isGotShineHook.installAtSym<"_ZN16GameDataFunction10isGotShineE22GameDataHolderAccessorPK9ShineInfo">();
+	stickTestHook.installAtSym<"_ZN2nn3hid13GetNpadStatesEPNS0_16NpadJoyDualStateEiRKj">();
 	hook::a64::assemble<"mov x0, #1\nsvc #0x28">().installAtOffset(ro::getRtldModule(), 0);
 }

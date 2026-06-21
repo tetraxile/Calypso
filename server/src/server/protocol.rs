@@ -4,7 +4,8 @@ use tas_script_formats::{
 	glam::{IVec2, Vec3},
 };
 use zerocopy::{
-	FromBytes, Immutable, IntoBytes, KnownLayout, Unalign, little_endian::{U32, U64}
+	FromBytes, Immutable, IntoBytes, KnownLayout, Unalign,
+	little_endian::{U32, U64},
 };
 
 #[derive(FromBytes, IntoBytes, KnownLayout, Immutable)]
@@ -45,6 +46,16 @@ pub struct ScriptInfo {
 	_padding: u8,
 }
 
+#[derive(FromBytes, KnownLayout, Immutable)]
+#[repr(C)]
+pub struct InputReport {
+	pub sampling_number: u64,
+	pub buttons: u64,
+	pub left_stick: IVec2,
+	pub right_stick: IVec2,
+	pub attributes: u32,
+}
+
 #[derive(FromPrimitive, Debug)]
 pub enum PacketType {
 	ServerInfo = 0,
@@ -64,6 +75,7 @@ pub enum PacketType {
 	ScriptEnded = 14,
 	ChangeStage = 15,
 	ReloadStage = 16,
+	ReportInput = 17,
 }
 
 #[derive(Debug, FromBytes, IntoBytes, KnownLayout, Immutable)]

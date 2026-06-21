@@ -2,7 +2,7 @@ mod game_info;
 mod input_display;
 mod script_info;
 
-use std::{fmt::Write, path::PathBuf, sync::Arc};
+use std::{fmt::Write as FmtWrite, fs::File, io::Write, path::PathBuf, sync::Arc};
 
 use eframe::{
 	CreationContext, Frame,
@@ -10,8 +10,12 @@ use eframe::{
 };
 use egui_dock::TabViewer;
 use eyre::{Context, Result, bail};
-use tas_script_formats::{Script, glam::Vec3};
+use tas_script_formats::{
+	Buttons, Script,
+	glam::{IVec2, Vec3},
+};
 use tokio::sync::mpsc;
+use zerocopy::IntoBytes;
 
 use crate::{
 	config::Config,
@@ -43,6 +47,7 @@ struct ActiveScript {
 	path: PathBuf,
 	script: Arc<Script>,
 }
+
 pub(super) struct State {
 	script_sender: mpsc::Sender<ScriptMessage>,
 	server_sender: mpsc::UnboundedSender<ToServer>,
@@ -57,6 +62,8 @@ pub(super) struct State {
 	stage: Option<(String, i32)>,
 	player_position: Option<Vec3>,
 	monospace: FontId,
+
+	input_tracker: File,
 }
 
 impl State {
@@ -91,6 +98,16 @@ impl State {
 				}
 			}
 		});
+		let input_tracker = {
+			let file = File::options()
+				.create(true)
+				.read(true)
+				.write(true)
+				.truncate(true)
+				.open("/tmp/input_recording")
+				.unwrap();
+			file
+		};
 
 		let mut state = State {
 			script_sender: to_script_manager,
@@ -106,6 +123,8 @@ impl State {
 			stage: None,
 			player_position: None,
 			monospace,
+
+			input_tracker,
 		};
 
 		if let Some(most_recent) = state.config.recent_scripts.get().get(0) {
@@ -115,7 +134,11 @@ impl State {
 		state
 	}
 
-	fn monospace_scope<R>(font_id: FontId, ui: &mut Ui, func: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {
+	fn monospace_scope<R>(
+		font_id: FontId,
+		ui: &mut Ui,
+		func: impl FnOnce(&mut Ui) -> R,
+	) -> InnerResponse<R> {
 		ui.scope(|ui| {
 			ui.style_mut().override_font_id = Some(font_id);
 			func(ui)
@@ -180,6 +203,23 @@ impl State {
 					scenario,
 				} => self.stage = Some((stage_name, scenario)),
 				ToUi::ReportPosition { position } => self.player_position = Some(position),
+				ToUi::InputReport(report) => {
+					{
+						if report.left_stick != IVec2::ZERO {
+							self.input_tracker
+								.write_all(
+									report.left_stick.with_y(-report.left_stick.y).as_bytes(),
+								)
+								.unwrap();
+						}
+					}
+
+					self.input_display.update(
+						Buttons::new(),
+						report.left_stick.with_y(-report.left_stick.y),
+						report.right_stick.with_y(-report.right_stick.y),
+					);
+				}
 			}
 		}
 	}

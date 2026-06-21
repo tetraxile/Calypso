@@ -16,6 +16,7 @@
 
 #include "al/Library/Thread/AsyncFunctorThread.h"
 #include "hk/container/FixedString.h"
+#include "smo/NintendoSDK/nn/hid.h"
 #include "smo/game/Sequence/ChangeStageInfo.h"
 
 namespace cly {
@@ -49,6 +50,7 @@ private:
 			cPacketType_ScriptEnded,
 			cPacketType_ChangeStage,
 			cPacketType_ReloadStage,
+			cPacketType_ReportInput,
 		};
 
 		PacketType type;
@@ -130,6 +132,7 @@ public:
 	static void log(const char* fmt, ...);
 	static void reportStageName(const sead::SafeString& stageName, s32 scenarioNo);
 	static void reportPlayerPosition(const sead::Vector3f& position);
+	static void reportInput(const nn::hid::NpadJoyDualState& state);
 	static void reportScriptCompleted();
 
 	struct FrameBuffer {
