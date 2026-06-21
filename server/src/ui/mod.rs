@@ -208,7 +208,7 @@ impl State {
 						if report.left_stick != IVec2::ZERO {
 							self.input_tracker
 								.write_all(
-									report.left_stick.with_y(-report.left_stick.y).as_bytes(),
+									report.left_stick.as_bytes(),
 								)
 								.unwrap();
 						}
