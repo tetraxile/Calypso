@@ -51,6 +51,7 @@ private:
 			cPacketType_ChangeStage,
 			cPacketType_ReloadStage,
 			cPacketType_ReportInput,
+			cPacketType_UpdateTool,
 		};
 
 		PacketType type;
@@ -96,6 +97,19 @@ public:
 		hk::FixedString<128> mStageName;
 		hk::FixedString<128> mEntranceName;
 	} changeStageInfo;
+
+	struct [[gnu::packed]] UpdateToolPacket {
+		enum class ToolType: u8 {
+			ShowUI,
+			AlwaysUncollectedMoons,
+		} toolType;
+		u8 data[16];
+	};
+
+	struct Tools {
+		bool showUi = true;
+		bool alwaysUncollectedMoons = true;
+	} tools;
 
 private:
 	constexpr static s32 cPort = 8171;

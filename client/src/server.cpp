@@ -198,6 +198,15 @@ hk::Result Server::handlePacket() {
 		// changeStageInfo.mHasChangeStageInfo = true;
 		break;
 	}
+	case PacketHeader::cPacketType_UpdateTool: {
+		auto start = cast<UpdateToolPacket*>(body);
+		Menu::log("%d %d", start->toolType, start->data[0]);
+		switch (start->toolType) {
+		case UpdateToolPacket::ToolType::ShowUI: tools.showUi = bool(start->data[0]); break;
+		case UpdateToolPacket::ToolType::AlwaysUncollectedMoons: tools.alwaysUncollectedMoons = bool(start->data[0]); break;
+		}
+		break;
+	}
 	default: break;
 	}
 

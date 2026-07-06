@@ -2,7 +2,7 @@ use std::{pin::pin, sync::Arc};
 
 use eyre::{Context, ContextCompat, Result, bail, eyre};
 use futures_util::future::{Either, select};
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use tas_script_formats::{ChangeStage, glam::Vec3};
 use tokio::{
 	io::{AsyncReadExt, AsyncWriteExt},
@@ -18,7 +18,7 @@ use tracing::{debug, error, info, warn};
 use zerocopy::{FromBytes, FromZeros, IntoBytes, Unalign, little_endian::U32};
 
 use crate::server::protocol::{
-	Controller, FramePacket, InputReport, PacketHeader, PacketType, ScriptInfo,
+	Controller, FramePacket, InputReport, PacketHeader, PacketType, ScriptInfo, ToolType,
 };
 
 pub mod protocol;
@@ -46,6 +46,7 @@ pub enum ToServer {
 	AdvanceFrame,
 	StartScript,
 	StopScript,
+	UpdateTool(ToolType, heapless::Vec<u8, 16>),
 }
 
 pub enum ToUi {
@@ -375,6 +376,26 @@ async fn handle_message(client: &mut OwnedWriteHalf, message: ToServer) -> Resul
 			)
 			.await
 			.context("failed to write stop packet")?,
+		ToServer::UpdateTool(tool_type, data) => {
+			client
+				.write_all(
+					PacketHeader {
+						packet_type: PacketType::UpdateTool as _,
+						size: (1 + data.len() as u32).into(),
+					}
+					.as_bytes(),
+				)
+				.await
+				.context("failed to write tool update packet")?;
+			client
+				.write_u8(tool_type.to_u8().unwrap())
+				.await
+				.context("failed to write tool type")?;
+			client
+				.write_all(&data)
+				.await
+				.context("failed to write tool data")?
+		}
 	}
 
 	client.flush().await.context("failed to flush")?;

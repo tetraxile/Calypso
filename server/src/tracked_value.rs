@@ -45,6 +45,12 @@ impl<T> TrackedValue<T> {
 	}
 }
 
+impl<T: Clone> TrackedValue<T> {
+	pub fn read(&self) -> T {
+		self.value.clone()
+	}
+}
+
 impl<T: Serialize> Serialize for TrackedValue<T> {
 	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
 	where

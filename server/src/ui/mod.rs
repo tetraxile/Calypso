@@ -1,6 +1,8 @@
 mod game_info;
 mod input_display;
+mod piano;
 mod script_info;
+mod tools;
 
 use std::{fmt::Write as FmtWrite, path::PathBuf, sync::Arc};
 
@@ -10,11 +12,10 @@ use eframe::{
 };
 use egui_dock::TabViewer;
 use eyre::{Context, Result, bail};
-use tas_script_formats::{
-	Buttons, Script,
-	glam::Vec3,
-};
+use tas_script_formats::{Buttons, Script, glam::Vec3};
 use tokio::sync::mpsc;
+
+pub use tools::Tools;
 
 use crate::{
 	config::Config,
@@ -29,6 +30,8 @@ pub enum TabType {
 	InputDisplay,
 	GameInfo,
 	Log,
+	PianoRoll,
+	Tools,
 }
 
 impl TabType {
@@ -38,6 +41,8 @@ impl TabType {
 			Self::InputDisplay => "Input Display",
 			Self::GameInfo => "Game Info",
 			Self::Log => "Log",
+			Self::PianoRoll => "Piano Roll",
+			Self::Tools => "Tools",
 		}
 	}
 }
@@ -136,6 +141,8 @@ impl State {
 		self.config
 			.recent_scripts
 			.if_changed(|_| update_config = true);
+
+		update_config |= self.tools_tracking();
 
 		if update_config {
 			self.config.save();
@@ -247,6 +254,8 @@ impl TabViewer for State {
 					ui.add_sized(ui.available_size(), TextEdit::multiline(&mut self.log));
 				});
 			}
+			TabType::PianoRoll => self.piano_roll_ui(ui),
+			TabType::Tools => self.tools_ui(ui),
 		}
 	}
 }

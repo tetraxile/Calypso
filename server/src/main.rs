@@ -49,7 +49,7 @@ impl Calypso {
 			.split_below(left, 0.5, vec![TabType::Log]);
 		dock_state
 			.main_surface_mut()
-			.split_above(right, 0.5, vec![TabType::GameInfo]);
+			.split_above(right, 0.5, vec![TabType::Tools, TabType::PianoRoll, TabType::GameInfo]);
 
 		Self {
 			dock_state,

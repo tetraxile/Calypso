@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf, sync::LazyLock};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
-use crate::tracked_value::TrackedValue;
+use crate::{tracked_value::TrackedValue, ui::Tools};
 
 static PROJECT_DIR: LazyLock<directories::ProjectDirs> = LazyLock::new(|| {
 	directories::ProjectDirs::from("dev.tetraxile", "tetraxile", "Calypso").unwrap()
@@ -12,6 +12,7 @@ static PROJECT_DIR: LazyLock<directories::ProjectDirs> = LazyLock::new(|| {
 #[derive(Serialize, Deserialize, Default)]
 pub struct Config {
 	pub recent_scripts: TrackedValue<Vec<PathBuf>>,
+	pub tools: Tools,
 }
 
 impl Config {

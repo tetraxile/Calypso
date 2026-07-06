@@ -2,6 +2,7 @@
 #include "hk/ro/RoUtil.h"
 #include "menu.h"
 #include "server.h"
+#include "smo/al/Library/Base/StringUtil.h"
 #include "smo/game/Sequence/ChangeStageInfo.h"
 #include "smo/game/System/GameDataFunction.h"
 #include "smo/game/System/GameDataHolder.h"
@@ -30,6 +31,8 @@
 #include "al/Library/Controller/NpadController.h"
 #include "al/Library/LiveActor/ActorPoseUtil.h"
 #include "al/Library/Memory/HeapUtil.h"
+#include "al/Library/Nerve/Nerve.h"
+#include "al/Library/Nerve/NerveUtil.h"
 #include "al/Library/Scene/Scene.h"
 #include "game/Scene/StageScene.h"
 #include "game/Sequence/HakoniwaSequence.h"
@@ -181,7 +184,7 @@ HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::
 // });
 
 HkTrampoline<bool, GameDataHolderAccessor, ShineInfo*> isGotShineHook = hk::hook::trampoline([](GameDataHolderAccessor accessor, ShineInfo* info) {
-	if (false) return isGotShineHook.orig(accessor, info);
+	if (!cly::Server::instance()->tools.alwaysUncollectedMoons) return isGotShineHook.orig(accessor, info);
 	return false;
 });
 HkTrampoline<void, nn::hid::NpadJoyDualState*, s32, const u32&> stickTestHook =
@@ -191,8 +194,22 @@ HkTrampoline<void, nn::hid::NpadJoyDualState*, s32, const u32&> stickTestHook =
 			cly::Server::reportInput(states[0]);
 		}
 	});
+HkTrampoline<void, al::Scene*, const char*> showUiHook = hk::hook::trampoline([](al::Scene* scene, const char* executorList) {
+	bool showUi = cly::Server::instance()->tools.showUi;
+	if (!showUi && al::isEndWithString(typeid(*al::getCurrentNerve(scene)).name(), "StageSceneNrvPlayE") && al::isStartWithString(executorList, "２Ｄ")) return;
+	showUiHook.orig(scene, executorList);
+});
+HkTrampoline<void, al::Scene*, const char*, const char*> showUiHook2 =
+	hk::hook::trampoline([](al::Scene* scene, const char* executorList, const char* otherExecutorList) {
+		bool showUi = cly::Server::instance()->tools.showUi;
+		if (!showUi && al::isEndWithString(typeid(*al::getCurrentNerve(scene)).name(), "StageSceneNrvPlayE") &&
+	        (al::isStartWithString(executorList, "２Ｄ") || al::isStartWithString(otherExecutorList, "２Ｄ")))
+			return;
+		showUiHook2.orig(scene, executorList, otherExecutorList);
+	});
 
 extern "C" void hkMain() {
+	hook::a64::assemble<"mov x0, #1\nsvc #0x28">().installAtOffset(ro::getRtldModule(), 0);
 	hk::gfx::DebugRenderer::instance()->installHooks();
 	gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
 	gameSystemDraw.installAtSym<"_ZN10GameSystem8drawMainEv">();
@@ -203,5 +220,6 @@ extern "C" void hkMain() {
 	fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
 	isGotShineHook.installAtSym<"_ZN16GameDataFunction10isGotShineE22GameDataHolderAccessorPK9ShineInfo">();
 	stickTestHook.installAtSym<"_ZN2nn3hid13GetNpadStatesEPNS0_16NpadJoyDualStateEiRKj">();
-	hook::a64::assemble<"mov x0, #1\nsvc #0x28">().installAtOffset(ro::getRtldModule(), 0);
+	showUiHook.installAtSym<"_ZN2al7drawKitEPKNS_5SceneEPKc">();
+	showUiHook2.installAtSym<"_ZN2al11drawKitListEPKNS_5SceneEPKcS4_">();
 }

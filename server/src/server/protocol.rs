@@ -1,4 +1,4 @@
-use num_derive::FromPrimitive;
+use num_derive::{FromPrimitive, ToPrimitive};
 use tas_script_formats::{
 	STASButtons,
 	glam::{IVec2, Vec3},
@@ -76,6 +76,13 @@ pub enum PacketType {
 	ChangeStage = 15,
 	ReloadStage = 16,
 	ReportInput = 17,
+	UpdateTool = 18,
+}
+
+#[derive(ToPrimitive, Debug)]
+pub enum ToolType {
+	ShowUi = 0,
+	AlwaysUncollectedMoons = 1,
 }
 
 #[derive(Debug, FromBytes, IntoBytes, KnownLayout, Immutable)]

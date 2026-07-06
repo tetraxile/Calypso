@@ -2,3 +2,5 @@
 
 _ZN2al5Scene8movementEv
 _ZN2al5Scene24initAndLoadStageResourceEPKci
+_ZN2al7drawKitEPKNS_5SceneEPKc
+_ZN2al11drawKitListEPKNS_5SceneEPKcS4_

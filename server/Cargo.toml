@@ -10,6 +10,7 @@ eframe = { version = "0.34.2", features = ["wgpu"] }
 egui_dock = "0.19.1"
 eyre = "0.6.12"
 futures-util = "0.3.32"
+heapless = "0.9.3"
 num-derive = "0.4.2"
 num-traits = "0.2.19"
 rfd = "0.17.2"
