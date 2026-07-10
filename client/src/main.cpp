@@ -108,11 +108,13 @@ HkTrampoline<void, GameSystem*> gameSystemUpdate = hk::hook::trampoline([](GameS
 			if (server->changeStageInfo.mSimpleReload) {
 				cly::Server::log("NOT restarting stage (todo: reloads)");
 			} else {
+				cly::Menu::log("changing to stage %s", server->changeStageInfo.mStageName.data());
 				ChangeStageInfo info(
-					gameDataHolder, server->changeStageInfo.mEntranceName, server->changeStageInfo.mStageName, server->changeStageInfo.mIsReturn,
+					gameDataHolder, server->changeStageInfo.mEntranceName.data(), server->changeStageInfo.mStageName.data(), server->changeStageInfo.mIsReturn,
 					server->changeStageInfo.mScenario, server->changeStageInfo.mSubScenario
 				);
 
+				gameDataHolder->changeNextStage(&info);
 				GameDataFunction::tryChangeNextStage(gameDataHolder, &info);
 				cly::Server::log("changing to stage %s", server->changeStageInfo.mStageName.data());
 			}

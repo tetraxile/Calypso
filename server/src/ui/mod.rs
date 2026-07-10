@@ -12,7 +12,7 @@ use eframe::{
 };
 use egui_dock::TabViewer;
 use eyre::{Context, Result, bail};
-use tas_script_formats::{Buttons, Script, glam::Vec3};
+use tas_script_formats::{Buttons, ChangeStage, Script, glam::Vec3};
 use tokio::sync::mpsc;
 
 pub use tools::Tools;

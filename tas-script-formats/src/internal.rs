@@ -1,6 +1,7 @@
 use bitfield_struct::bitfield;
 use glam::{IVec2, Mat3, Quat, Vec2, Vec3};
 use num_derive::FromPrimitive;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 pub struct Script {
@@ -98,7 +99,7 @@ impl Controller {
 	}
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ChangeStage {
 	pub stage_name: String,
 	pub entrance_id: String,

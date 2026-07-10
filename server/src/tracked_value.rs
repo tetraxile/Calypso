@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Default)]
 pub struct TrackedValue<T> {
 	changed: bool,
 	value: T,
@@ -72,5 +71,14 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for TrackedValue<T> {
 impl<T> From<T> for TrackedValue<T> {
 	fn from(value: T) -> Self {
 		TrackedValue::new(value)
+	}
+}
+
+impl<T: Default> Default for TrackedValue<T> {
+	fn default() -> Self {
+		Self {
+			changed: true,
+			value: Default::default(),
+		}
 	}
 }

@@ -48,14 +48,14 @@ void Server::init(sead::Heap* heap) {
 
 	nn::nifm::Initialize();
 	nn::nifm::SubmitNetworkRequestAndWait();
-	if (!nn::nifm::IsNetworkAvailable()) {
-		nn::err::ApplicationErrorArg arg = nn::err::ApplicationErrorArg(
-			0, "No network available", "You must be connected to a network to use the TAS mod", nn::settings::LanguageCode::Make(nn::settings::Language_English)
-		);
+	// if (!nn::nifm::IsNetworkAvailable()) {
+	// 	nn::err::ApplicationErrorArg arg = nn::err::ApplicationErrorArg(
+	// 		0, "No network available", "You must be connected to a network to use the TAS mod", nn::settings::LanguageCode::Make(nn::settings::Language_English)
+	// 	);
 
-		nn::err::ShowApplicationError(arg);
-		hk::svc::ExitProcess();
-	}
+	// 	nn::err::ShowApplicationError(arg);
+	// 	hk::svc::ExitProcess();
+	// }
 
 	in_addr currentAddr, subnetMask;
 	std::array<in_addr, 3> unusedAddresses;
