@@ -93,7 +93,11 @@ impl State {
 					Slider::new(value, 1..=15).integer(),
 				)
 			});
-			tracking_checkbox(ui, "Default scenario", &mut tools.change_stage_info.use_default_scenario);
+			tracking_checkbox(
+				ui,
+				"Default scenario",
+				&mut tools.change_stage_info.use_default_scenario,
+			);
 			ui.end_row();
 			ui.label("Sub-scenario");
 			tracking(
@@ -109,7 +113,11 @@ impl State {
 					.send(ToServer::ChangeStage(ChangeStage {
 						stage_name: tools.change_stage_info.stage_name.read(),
 						entrance_id: tools.change_stage_info.entrance_id.read(),
-						scenario_no: tools.change_stage_info.scenario_no.read(),
+						scenario_no: if tools.change_stage_info.use_default_scenario.read() {
+							-1
+						} else {
+							tools.change_stage_info.scenario_no.read()
+						},
 						sub_scenario: tools.change_stage_info.sub_scenario.read(),
 						is_return: tools.change_stage_info.is_return.read(),
 					}))
