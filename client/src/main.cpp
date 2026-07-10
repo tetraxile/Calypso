@@ -114,7 +114,6 @@ HkTrampoline<void, GameSystem*> gameSystemUpdate = hk::hook::trampoline([](GameS
 					server->changeStageInfo.mScenario, server->changeStageInfo.mSubScenario
 				);
 
-				gameDataHolder->changeNextStage(&info);
 				GameDataFunction::tryChangeNextStage(gameDataHolder, &info);
 				cly::Server::log("changing to stage %s", server->changeStageInfo.mStageName.data());
 			}
