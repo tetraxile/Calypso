@@ -109,7 +109,7 @@ void Menu::init(sead::Heap* heap) {
 void Menu::handleInput(sead::BitFlag32 padHold) {
 	sead::BitFlag32 padTrig = ~mPrevHold & padHold.getDirect();
 
-	if (padHold.isOnBit(sead::Controller::cPadIdx_ZL) && padTrig.isOnBit(sead::Controller::cPadIdx_ZR)) {
+	if (padHold.isOnBit(sead::Controller::cPadIdx_ZL) && padTrig.isOnBit(sead::Controller::cPadIdx_Left)) {
 		mIsActive = !mIsActive;
 		mPrevHold = padHold;
 		return;

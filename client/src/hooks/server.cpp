@@ -68,5 +68,7 @@ void installReportPlayerPosition() {
 void Hooks::setupServer() {
 	installDiscovery();
 	installHandleChangeStage();
+	installReportStageName();
+	installReportPlayerPosition()
 }
 } // namespace cly::hooks
