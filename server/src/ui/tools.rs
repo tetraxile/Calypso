@@ -34,8 +34,9 @@ impl Default for Tools {
 			show_ui: true.into(),
 			always_uncollected_moons: true.into(),
 			change_stage_info: ChangeStageInfo {
-				entrance_id: "start".to_owned().into(),
+				stage_name: "CurrentWorldHome".to_owned().into(),
 				scenario_no: (1i32).into(),
+				use_default_scenario: true.into(),
 				..Default::default()
 			},
 		}
