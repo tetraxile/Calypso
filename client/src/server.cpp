@@ -2,7 +2,7 @@
 #include "hk/types.h"
 #include "menu.h"
 #include "smo/NintendoSDK/nn/hid.h"
-#include "smo/game/Sequence/ChangeStageInfo.h"
+#include "smo/game/MapObj/ChangeStageInfo.h"
 #include "tas.h"
 
 #include "System/GameDataFunction.h"
@@ -32,7 +32,7 @@
 #include <sead/prim/seadEndian.h>
 #include <sead/thread/seadDelegateThread.h>
 
-HkTrampoline<void> disableSocketInit = hk::hook::trampoline([]() -> void {});
+HkTrampoline disableSocketInit = [](TrampolineStatic()) -> void {};
 
 static constexpr s32 socketPoolSize = 0x600000;
 static constexpr s32 socketAllocPoolSize = 0x20000;

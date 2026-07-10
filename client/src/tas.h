@@ -58,6 +58,7 @@ private:
 	bool mIsReplaying = false;
 	bool mHasCurFrame = false;
 	Server::FramePacket mCurFrame;
+	Server::FramePacket mLastFrame;
 
 public:
 	System() = default;
@@ -77,7 +78,7 @@ public:
 
 	static void checkForNextFrame();
 	static void getNextFrame();
-	static hk::ValueOrResult<Server::FramePacket> tryReadCurFrame();
+	static Server::FramePacket tryReadCurFrame();
 
 	static void setScriptInfo(Server::ScriptInfoPacket scriptInfo) { instance()->mScriptInfo = scriptInfo; }
 

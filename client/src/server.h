@@ -17,7 +17,7 @@
 #include "al/Library/Thread/AsyncFunctorThread.h"
 #include "hk/container/FixedString.h"
 #include "smo/NintendoSDK/nn/hid.h"
-#include "smo/game/Sequence/ChangeStageInfo.h"
+#include "smo/game/MapObj/ChangeStageInfo.h"
 
 namespace cly {
 

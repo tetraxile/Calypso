@@ -64,15 +64,15 @@ void System::getNextFrame() {
 	}
 }
 
-hk::ValueOrResult<Server::FramePacket> System::tryReadCurFrame() {
+Server::FramePacket System::tryReadCurFrame() {
 	System* self = instance();
 
 	if (isApplyingInput() && self->mHasCurFrame && self->mCurFrame.frameIndex == self->mFrameIdx) {
 		Menu::log("%04d->%04d: %016lx %06d %06d", self->mFrameIdx, self->mCurFrame.nextFrameIndex, self->mCurFrame.player1.buttons, self->mCurFrame.player1.leftStick.x, self->mCurFrame.player1.leftStick.y);
-		return self->mCurFrame;
+		return self->mLastFrame = self->mCurFrame;
 	}
 
-	return hk::ResultFailed();
+	return self->mLastFrame;
 }
 
 void System::startReplay() {

@@ -1,9 +1,9 @@
 #include "hk/hook/a64/Assembler.h"
 #include "hk/ro/RoUtil.h"
+#include "hooks/hooks.h"
 #include "menu.h"
 #include "server.h"
 #include "smo/al/Library/Base/StringUtil.h"
-#include "smo/game/Sequence/ChangeStageInfo.h"
 #include "smo/game/System/GameDataFunction.h"
 #include "smo/game/System/GameDataHolder.h"
 #include "smo/game/System/GameDataHolderAccessor.h"
@@ -52,175 +52,11 @@ void endInit() {
 }
 } // namespace cly
 
-HkTrampoline<void, sead::FileDeviceMgr*> fileDeviceMgrHook = hk::hook::trampoline([](sead::FileDeviceMgr* fileDeviceMgr) -> void {
-	fileDeviceMgrHook.orig(fileDeviceMgr);
 
-	fileDeviceMgr->mMountedSd = nn::fs::MountSdCardForDebug("sd") == 0;
-});
-
-HkTrampoline<void, GameSystem*> gameSystemInit = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
-	sead::Heap* heap = cly::initializeHeap();
-
-	cly::tas::Pauser* pauser = cly::tas::Pauser::createInstance(heap);
-
-	cly::Menu* menu = cly::Menu::createInstance(heap);
-	menu->init(heap);
-
-	cly::Server* server = cly::Server::createInstance(heap);
-	server->init(heap);
-
-	cly::tas::System* system = cly::tas::System::createInstance(heap);
-	system->init(heap);
-
-	cly::endInit();
-
-	gameSystemInit.orig(gameSystem);
-});
-
-HkTrampoline<void, GameSystem*> gameSystemDraw = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
-	if (cly::tas::Pauser::instance()->isSequenceActive()) {
-		gameSystemDraw.orig(gameSystem);
-	}
-	cly::tas::Pauser::instance()->update();
-
-	cly::Menu::instance()->draw();
-});
-
-static u8 discoveryTimer = 30;
-HkTrampoline<void, GameSystem*> gameSystemUpdate = hk::hook::trampoline([](GameSystem* gameSystem) -> void {
-	if (cly::tas::Pauser::instance()->isSequenceActive()) {
-		gameSystemUpdate.orig(gameSystem);
-	}
-
-	cly::tas::System::checkForNextFrame();
-
-	if (--discoveryTimer == 0) {
-		discoveryTimer = 30;
-		cly::Server::instance()->sendUDPDiscoveryBroadcast();
-	}
-
-	if (auto sequence = static_cast<HakoniwaSequence*>(gameSystem->mSequence)) {
-		auto server = cly::Server::instance();
-
-		auto has = true;
-		if (server->changeStageInfo.mHasChangeStageInfo.compare_exchange_strong(has, false, std::memory_order_seq_cst, std::memory_order_relaxed)) {
-			GameDataHolder* gameDataHolder = sequence->mGameDataHolderAccessor;
-			if (server->changeStageInfo.mSimpleReload) {
-				cly::Server::log("NOT restarting stage (todo: reloads)");
-			} else {
-				cly::Menu::log("changing to stage %s", server->changeStageInfo.mStageName.data());
-				ChangeStageInfo info(
-					gameDataHolder, server->changeStageInfo.mEntranceName.data(), server->changeStageInfo.mStageName.data(), server->changeStageInfo.mIsReturn,
-					server->changeStageInfo.mScenario, server->changeStageInfo.mSubScenario
-				);
-
-				GameDataFunction::tryChangeNextStage(gameDataHolder, &info);
-				cly::Server::log("changing to stage %s", server->changeStageInfo.mStageName.data());
-			}
-			server->changeStageInfo.mHasChangeStageInfo = false;
-		}
-	}
-
-	// cly::tas::Pauser::instance()->update();
-	// cly::Menu::instance()->handleInput(al::getMainControllerPort());
-});
-
-HkTrampoline<void, al::Scene*, const char*, s32> sceneInit = hk::hook::trampoline([](al::Scene* scene, const char* stageName, s32 scenario) -> void {
-	cly::Server::reportStageName(stageName, scenario);
-	cly::tas::Pauser::instance()->setWaitingOnLoad(false);
-	sceneInit.orig(scene, stageName, scenario);
-});
-
-HkTrampoline<void, al::Scene*> sceneUpdate = hk::hook::trampoline([](al::Scene* scene) -> void {
-	sceneUpdate.orig(scene);
-	if (auto player = rs::getPlayerActor(scene)) {
-		cly::Server::reportPlayerPosition(al::getTrans(player));
-	}
-	if (cly::tas::System::isReplaying()) cly::tas::System::getNextFrame();
-});
-
-HkTrampoline<void, al::NpadController*> inputHook = hk::hook::trampoline([](al::NpadController* controller) -> void {
-	inputHook.orig(controller);
-
-	if (!cly::gIsInitialized) return;
-
-	// cly::Menu::log(
-	// 	"%d %d %d %d %08x %d", controller->mIsConnected ? 1 : 0, controller->mControllerMode, controller->mNpadId,
-	// controller->mNpadStyleTag, 	controller->mPadHold, controller->mSamplingNumber
-	// );
-
-	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
-		cly::Menu::instance()->handleInput(controller->mPadHold);
-	}
-
-	// if (cly::Menu::isActive()) {
-	// 	controller->mPadHold.makeAllZero();
-	// 	controller->mLeftStick.set(sead::Vector2f::zero);
-	// 	controller->mRightStick.set(sead::Vector2f::zero);
-	// }
-
-	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
-		// player 1
-		cly::tas::System::tryReadCurFrame().map([&](cly::Server::FramePacket frame) {
-			controller->mPadHold = cly::tas::convertButtonsSTASToSead(frame.player1.buttons);
-			controller->mLeftStick.set({ f32(frame.player1.leftStick.x) / 32767.f, f32(frame.player1.leftStick.y) / 32767.f });
-			controller->mRightStick.set({ f32(frame.player1.rightStick.x) / 32767.f, f32(frame.player1.rightStick.y) / 32767.f });
-			auto applyAccel = [&](s32 index, const sead::Vector3f& accel) {
-				auto addon = (sead::AccelerometerAddon*)controller->getAddonByOrder(sead::ControllerDefine::cAddon_Accelerometer, index);
-				addon->mAcceleration.set(accel);
-			};
-			applyAccel(0, frame.player1.accelLeft);
-			if (cly::tas::System::isDualJoycons(0)) applyAccel(1, frame.player1.accelRight);
-			return 0;
-		});
-	} else if (controller->mControllerMode == 1) {
-		// player 2
-	}
-});
-
-// HkTrampoline<void, sead::Vector2f*, const al::CameraPoser*> cameraRotateHook =
-// hk::hook::trampoline([](sead::Vector2f* out, const al::CameraPoser* poser) -> void {
-//     out->x = 0.0f;
-//     out->y = 0.0f;
-// });
-
-HkTrampoline<bool, GameDataHolderAccessor, ShineInfo*> isGotShineHook = hk::hook::trampoline([](GameDataHolderAccessor accessor, ShineInfo* info) {
-	if (!cly::Server::instance()->tools.alwaysUncollectedMoons) return isGotShineHook.orig(accessor, info);
-	return false;
-});
-HkTrampoline<void, nn::hid::NpadJoyDualState*, s32, const u32&> stickTestHook =
-	hk::hook::trampoline([](nn::hid::NpadJoyDualState* states, s32 count, const u32& port) {
-		stickTestHook.orig(states, count, port);
-		if (count >= 1) {
-			cly::Server::reportInput(states[0]);
-		}
-	});
-HkTrampoline<void, al::Scene*, const char*> showUiHook = hk::hook::trampoline([](al::Scene* scene, const char* executorList) {
-	bool showUi = cly::Server::instance()->tools.showUi;
-	if (!showUi && al::isEndWithString(typeid(*al::getCurrentNerve(scene)).name(), "StageSceneNrvPlayE") && al::isStartWithString(executorList, "２Ｄ")) return;
-	showUiHook.orig(scene, executorList);
-});
-HkTrampoline<void, al::Scene*, const char*, const char*> showUiHook2 =
-	hk::hook::trampoline([](al::Scene* scene, const char* executorList, const char* otherExecutorList) {
-		bool showUi = cly::Server::instance()->tools.showUi;
-		if (!showUi && al::isEndWithString(typeid(*al::getCurrentNerve(scene)).name(), "StageSceneNrvPlayE") &&
-	        (al::isStartWithString(executorList, "２Ｄ") || al::isStartWithString(otherExecutorList, "２Ｄ")))
-			return;
-		showUiHook2.orig(scene, executorList, otherExecutorList);
-	});
 
 extern "C" void hkMain() {
 	hook::a64::assemble<"mov x0, #1\nsvc #0x28">().installAtOffset(ro::getRtldModule(), 0);
 	hk::gfx::DebugRenderer::instance()->installHooks();
-	gameSystemInit.installAtSym<"_ZN10GameSystem4initEv">();
-	gameSystemDraw.installAtSym<"_ZN10GameSystem8drawMainEv">();
-	gameSystemUpdate.installAtSym<"_ZN10GameSystem8movementEv">();
-	sceneInit.installAtSym<"_ZN2al5Scene24initAndLoadStageResourceEPKci">();
-	sceneUpdate.installAtSym<"_ZN2al5Scene8movementEv">();
-	inputHook.installAtSym<"_ZN2al14NpadController9calcImpl_Ev">();
-	fileDeviceMgrHook.installAtSym<"_ZN4sead13FileDeviceMgrC1Ev">();
-	isGotShineHook.installAtSym<"_ZN16GameDataFunction10isGotShineE22GameDataHolderAccessorPK9ShineInfo">();
-	stickTestHook.installAtSym<"_ZN2nn3hid13GetNpadStatesEPNS0_16NpadJoyDualStateEiRKj">();
-	showUiHook.installAtSym<"_ZN2al7drawKitEPKNS_5SceneEPKc">();
-	showUiHook2.installAtSym<"_ZN2al11drawKitListEPKNS_5SceneEPKcS4_">();
+
+	cly::hooks::Hooks::setup();
 }

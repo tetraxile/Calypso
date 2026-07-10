@@ -1,4 +1,4 @@
-set(LINKFLAGS -nodefaultlibs)
+set(LINKFLAGS -nodefaultlibs -nostdlib)
 set(LLDFLAGS --no-demangle --gc-sections)
 
 set(OPTIMIZE_OPTIONS_DEBUG -O2 -gdwarf-4)
