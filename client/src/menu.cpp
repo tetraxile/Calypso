@@ -20,10 +20,11 @@
 #include <sead/heap/seadHeapMgr.h>
 #include <sead/prim/seadRuntimeTypeInfo.h>
 
-#include "al/Library/Controller/InputFunction.h"
-#include "al/Library/Framework/GameFrameworkNx.h"
-#include "al/Library/System/GameSystemInfo.h"
-#include "game/System/Application.h"
+#include "Library/Controller/InputFunction.h"
+#include "Library/Framework/GameFrameworkNx.h"
+#include "Library/System/GameSystemInfo.h"
+
+#include "System/Application.h"
 
 using Vector2f = hk::util::Vector2f;
 
@@ -49,37 +50,37 @@ void Menu::init(sead::Heap* heap) {
 
 	MenuItem* frameBuffer = addText({ mCellResolution.x - 3, 0 }, "fb: 0/0");
 	frameBuffer->mDrawFunc = [](MenuItem* self) -> void {
-		auto server = Server::instance();
+		auto* server = Server::instance();
 		self->mText.format("fb: %d/%d", u32(server->mFrameBuffer.count), server->mFrameBuffer.capacity);
 		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
 	};
 	MenuItem* progress = addText({ mCellResolution.x - 3, 1 }, "pr: 0/0");
 	progress->mDrawFunc = [](MenuItem* self) -> void {
-		auto system = tas::System::instance();
+		auto* system = tas::System::instance();
 		self->mText.format("pr: %d/%d", system->getFrameIndex(), system->getFrameCount());
 		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
 	};
 	MenuItem* paused = addText({ mCellResolution.x - 3, 2 }, "pa: -");
 	paused->mDrawFunc = [](MenuItem* self) -> void {
-		auto pauser = tas::Pauser::instance();
+		auto* pauser = tas::Pauser::instance();
 		self->mText.format("pa: %s", pauser->isSequenceActive() ? "-" : "+");
 		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
 	};
 	MenuItem* playing = addText({ mCellResolution.x - 3, 3 }, "pl: -");
 	playing->mDrawFunc = [](MenuItem* self) -> void {
-		auto system = tas::System::instance();
+		auto* system = tas::System::instance();
 		self->mText.format("pl: %s", system->isReplaying() ? "+" : "-");
 		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
 	};
 	MenuItem* blocked = addText({ mCellResolution.x - 3, 4 }, "bl: -");
 	blocked->mDrawFunc = [](MenuItem* self) -> void {
-		auto pauser = tas::Pauser::instance();
+		auto* pauser = tas::Pauser::instance();
 		self->mText.format("bl: %s", pauser->isBlocked() ? "+" : "-");
 		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
 	};
 	MenuItem* fpaused = addText({ mCellResolution.x - 3, 5 }, "pm: -");
 	fpaused->mDrawFunc = [](MenuItem* self) -> void {
-		auto pauser = tas::Pauser::instance();
+		auto* pauser = tas::Pauser::instance();
 		self->mText.format("pm: %s", pauser->isManuallyPaused() ? "+" : "-");
 		self->draw_(MenuItem::cFgColorOn, MenuItem::cBgColorOff);
 	};
@@ -88,13 +89,13 @@ void Menu::init(sead::Heap* heap) {
 	addButton({ 0, 22 }, "advance frame", []() -> void { tas::Pauser::instance()->advanceFrame(); })->setSpan({ 2, 1 });
 
 	MenuItem* itemConnect = addButton({ 0, 24 }, "connect", []() -> void {
-								cly::Server* server = cly::Server::instance();
+								auto* server = Server::instance();
 								s32 r = server->connect();
 								if (r != 0) log("Connection error: %s\n", strerror(r));
 							})->setSpan({ 2, 1 });
 
 	// addButton({ 0, 25 }, "send UDP", []() -> void {
-	// 	cly::Server* server = cly::Server::instance();
+	// 	Server* server = Server::instance();
 
 	// 	if (r != 0) log("Connection error: %s\n", strerror(r));
 	// })->setSpan({ 2, 1 });
@@ -171,7 +172,7 @@ void Menu::draw() {
 		if (item.mUpdateFunc) item.mUpdateFunc(&item);
 	}
 
-	auto* drawContext = Application::instance()->mDrawSystemInfo->drawContext;
+	agl::DrawContext* drawContext = Application::instance()->mDrawSystemInfo->drawContext;
 	mRenderer->clear();
 	mRenderer->begin(drawContext->getCommandBuffer()->ToData()->pNvnCommandBuffer);
 	mRenderer->setGlyphHeight(mFontHeight);
@@ -195,7 +196,7 @@ void Menu::draw() {
 
 void Menu::drawLog() {
 	for (s32 i = 0; i < cLogEntryNumMax; i++) {
-		auto* entry = mLog[i];
+		LogEntry* entry = mLog[i];
 		if (!entry) break;
 
 		util::Color4f color = MenuItem::cFgColorOn;
@@ -317,13 +318,13 @@ void Menu::log(const char* fmt, ...) {
 
 	auto& logArr = sInstance->mLog;
 
-	auto* finalEntry = logArr[cLogEntryNumMax - 1];
+	LogEntry* finalEntry = logArr[cLogEntryNumMax - 1];
 	if (finalEntry) {
 		logArr.erase(cLogEntryNumMax - 1);
 		delete finalEntry;
 	}
 
-	auto* newEntry = new (sInstance->mHeap) LogEntry;
+	LogEntry* newEntry = new (sInstance->mHeap) LogEntry;
 	newEntry->text.formatV(fmt, args);
 	logArr.pushFront(newEntry);
 

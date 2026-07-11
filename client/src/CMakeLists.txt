@@ -6,12 +6,7 @@ target_sources(${PROJECT_NAME}
         server.cpp
         tas.cpp
         util.cpp
-
-        hooks/hooks.cpp
-        hooks/basic.cpp
-        hooks/server.cpp
-        hooks/tas.cpp
-        hooks/fs.cpp
+        hooks.cpp
 )
 
 target_include_directories(${PROJECT_NAME}

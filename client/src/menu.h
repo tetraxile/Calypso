@@ -1,5 +1,7 @@
 #pragma once
 
+#include "menuitem.h"
+
 #include <hk/gfx/DebugRenderer.h>
 
 #include <sead/container/seadPtrArray.h>
@@ -8,8 +10,6 @@
 #include <sead/heap/seadDisposer.h>
 #include <sead/prim/seadBitFlag.h>
 #include <sead/prim/seadSafeString.h>
-
-#include "menuitem.h"
 
 namespace cly {
 

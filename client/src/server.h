@@ -1,23 +1,24 @@
 #pragma once
 
-#include <atomic>
+#include <hk/container/FixedString.h>
 #include <hk/container/Span.h>
 #include <hk/os/Event.h>
 #include <hk/types.h>
 #include <hk/util/Math.h>
 
+#include <atomic>
 #include <netinet/in.h>
 
+#include <nn/hid.h>
 #include <nn/os.h>
 #include <sead/basis/seadTypes.h>
 #include <sead/container/seadRingBuffer.h>
 #include <sead/heap/seadExpHeap.h>
 #include <sead/math/seadVector.h>
 
-#include "al/Library/Thread/AsyncFunctorThread.h"
-#include "hk/container/FixedString.h"
-#include "smo/NintendoSDK/nn/hid.h"
-#include "smo/game/MapObj/ChangeStageInfo.h"
+#include "Library/Thread/AsyncFunctorThread.h"
+#include "MapObj/ChangeStageInfo.h"
+#include "Sequence/HakoniwaSequence.h"
 
 namespace cly {
 
@@ -99,7 +100,7 @@ public:
 	} changeStageInfo;
 
 	struct [[gnu::packed]] UpdateToolPacket {
-		enum class ToolType: u8 {
+		enum class ToolType : u8 {
 			ShowUI,
 			AlwaysUncollectedMoons,
 		} toolType;
@@ -148,6 +149,7 @@ public:
 	static void reportPlayerPosition(const sead::Vector3f& position);
 	static void reportInput(const nn::hid::NpadJoyDualState& state);
 	static void reportScriptCompleted();
+	static void handleStageChange(HakoniwaSequence* sequence);
 
 	struct FrameBuffer {
 		constexpr static s32 capacity = 60;
@@ -156,7 +158,11 @@ public:
 		std::atomic<u32> writeHead = 0;
 		FramePacket buf[capacity];
 
-		void clear() { count = 0; readHead = 0; writeHead = 0; }
+		void clear() {
+			count = 0;
+			readHead = 0;
+			writeHead = 0;
+		}
 
 		void push(FramePacket& frame) {
 			if (count >= capacity) return;
@@ -168,7 +174,7 @@ public:
 		hk::ValueOrResult<FramePacket> pop() {
 			if (count <= 0) return hk::ResultNoValue();
 
-			auto packet = buf[readHead++];
+			FramePacket packet = buf[readHead++];
 			if (readHead >= capacity) readHead -= capacity;
 			count--;
 			return packet;

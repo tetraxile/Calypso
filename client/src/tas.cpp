@@ -1,12 +1,15 @@
 #include "tas.h"
-#include "menu.h"
-#include "server.h"
 
 #include <hk/diag/diag.h>
 
 #include <nn/fs.h>
+#include <sead/controller/seadAccelerometerAddon.h>
 #include <sead/controller/seadController.h>
 #include <sead/heap/seadHeap.h>
+
+#include "main.h"
+#include "menu.h"
+#include "server.h"
 
 namespace cly::tas {
 
@@ -68,7 +71,10 @@ Server::FramePacket System::tryReadCurFrame() {
 	System* self = instance();
 
 	if (isApplyingInput() && self->mHasCurFrame && self->mCurFrame.frameIndex == self->mFrameIdx) {
-		Menu::log("%04d->%04d: %016lx %06d %06d", self->mFrameIdx, self->mCurFrame.nextFrameIndex, self->mCurFrame.player1.buttons, self->mCurFrame.player1.leftStick.x, self->mCurFrame.player1.leftStick.y);
+		Menu::log(
+			"%04d->%04d: %016lx %06d %06d", self->mFrameIdx, self->mCurFrame.nextFrameIndex, self->mCurFrame.player1.buttons,
+			self->mCurFrame.player1.leftStick.x, self->mCurFrame.player1.leftStick.y
+		);
 		return self->mLastFrame = self->mCurFrame;
 	}
 
@@ -97,6 +103,43 @@ void System::stopReplay() {
 		Pauser::instance()->setBlocked(false);
 		Server::instance()->mFrameBuffer.clear();
 		Menu::log("stopped replaying");
+	}
+}
+
+void System::processInputs(al::NpadController* controller) {
+	if (!cly::gIsInitialized) return;
+
+	// cly::Menu::log(
+	// 	"%d %d %d %d %08x %d", controller->mIsConnected ? 1 : 0, controller->mControllerMode, controller->mNpadId,
+	// controller->mNpadStyleTag, 	controller->mPadHold, controller->mSamplingNumber
+	// );
+
+	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
+		cly::Menu::instance()->handleInput(controller->mPadHold);
+	}
+
+	if (!isApplyingInput()) return;
+
+	// if (cly::Menu::isActive()) {
+	// 	controller->mPadHold.makeAllZero();
+	// 	controller->mLeftStick.set(sead::Vector2f::zero);
+	// 	controller->mRightStick.set(sead::Vector2f::zero);
+	// }
+
+	if (controller->mControllerMode == -1 || controller->mControllerMode == 0) {
+		// player 1
+		auto frame = tryReadCurFrame();
+		controller->mPadHold = convertButtonsSTASToSead(frame.player1.buttons);
+		controller->mLeftStick.set({ f32(frame.player1.leftStick.x) / 32767.f, f32(frame.player1.leftStick.y) / 32767.f });
+		controller->mRightStick.set({ f32(frame.player1.rightStick.x) / 32767.f, f32(frame.player1.rightStick.y) / 32767.f });
+		auto applyAccel = [&](s32 index, const sead::Vector3f& accel) {
+			auto addon = static_cast<sead::AccelerometerAddon*>(controller->getAddonByOrder(sead::ControllerDefine::cAddon_Accelerometer, index));
+			addon->mAcceleration.set(accel);
+		};
+		applyAccel(0, frame.player1.accelLeft);
+		if (isDualJoycons(0)) applyAccel(1, frame.player1.accelRight);
+	} else if (controller->mControllerMode == 1) {
+		// player 2
 	}
 }
 

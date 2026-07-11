@@ -1,12 +1,16 @@
 #pragma once
 
+#include "server.h"
+
 #include <atomic>
+
 #include <nn/fs.h>
 #include <sead/heap/seadDisposer.h>
 #include <sead/math/seadVector.h>
 #include <sead/prim/seadBitFlag.h>
 #include <sead/prim/seadSafeString.h>
-#include "server.h"
+
+#include "Library/Controller/NpadController.h"
 
 namespace cly::tas {
 
@@ -65,6 +69,7 @@ public:
 	void init(sead::Heap* heap);
 	static void startReplay();
 	static void stopReplay();
+	static void processInputs(al::NpadController* controller);
 
 	static bool isReplaying() { return instance()->mIsReplaying; }
 

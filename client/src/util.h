@@ -1,10 +1,10 @@
 #pragma once
 
+#include <hk/container/StringView.h>
 #include <hk/gfx/Util.h>
 
 #include <nn/types.h>
 #include <sead/prim/seadSafeString.h>
-#include "hk/container/StringView.h"
 
 #define TITLE_ID HK_TITLE_ID
 #define FORMAT_VERSION 0
@@ -39,7 +39,7 @@ inline u32 roundUp(u32 x, u32 power_of_2) {
 	return (x + a) & ~a;
 }
 
-template<typename T>
+template <typename T>
 const char* getTypeName(T* value) {
 	return typeid(*value).name();
 }

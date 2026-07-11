@@ -1,16 +1,12 @@
 #include "server.h"
-#include "hk/types.h"
 #include "menu.h"
-#include "smo/NintendoSDK/nn/hid.h"
-#include "smo/game/MapObj/ChangeStageInfo.h"
 #include "tas.h"
-
-#include "System/GameDataFunction.h"
 
 #include <hk/container/Array.h>
 #include <hk/diag/diag.h>
 #include <hk/hook/Trampoline.h>
 #include <hk/svc/api.h>
+#include <hk/types.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -21,6 +17,7 @@
 #include <nn/fs.h>
 #include <nn/fs/fs_files.h>
 #include <nn/fs/fs_types.h>
+#include <nn/hid.h>
 #include <nn/nifm.h>
 #include <nn/nifm_ip.h>
 #include <nn/settings.h>
@@ -31,6 +28,9 @@
 #include <sead/math/seadMathCalcCommon.h>
 #include <sead/prim/seadEndian.h>
 #include <sead/thread/seadDelegateThread.h>
+
+#include "MapObj/ChangeStageInfo.h"
+#include "System/GameDataFunction.h"
 
 HkTrampoline disableSocketInit = [](TrampolineStatic()) -> void {};
 
@@ -177,10 +177,10 @@ hk::Result Server::handlePacket() {
 			u16 entranceNameSize;
 		};
 
-		auto start = cast<Start*>(body);
+		Start* start = cast<Start*>(body);
 		Server::log("%d %d %d %d", start->scenario, start->stageNameSize, start->isReturn, start->subScenario);
-		auto stageName = cast<char*>(body + sizeof(Start));
-		auto entranceName = cast<char*>(stageName + start->stageNameSize);
+		char* stageName = cast<char*>(body + sizeof(Start));
+		char* entranceName = cast<char*>(stageName + start->stageNameSize);
 		Server::log("%s %s", stageName, entranceName);
 		changeStageInfo.mStageName = stageName;
 		changeStageInfo.mEntranceName = entranceName;
@@ -199,7 +199,7 @@ hk::Result Server::handlePacket() {
 		break;
 	}
 	case PacketHeader::cPacketType_UpdateTool: {
-		auto start = cast<UpdateToolPacket*>(body);
+		UpdateToolPacket* start = cast<UpdateToolPacket*>(body);
 		Menu::log("%d %d", start->toolType, start->data[0]);
 		switch (start->toolType) {
 		case UpdateToolPacket::ToolType::ShowUI: tools.showUi = bool(start->data[0]); break;
@@ -329,7 +329,7 @@ void Server::log(const char* fmt, ...) {
 	va_start(args, fmt);
 
 	char message[0x400 + sizeof(PacketHeader)];
-	auto packetHeader = reinterpret_cast<PacketHeader*>(message);
+	PacketHeader* packetHeader = reinterpret_cast<PacketHeader*>(message);
 	s32 len = vsnprintf(message + sizeof(PacketHeader), sizeof(message) - sizeof(PacketHeader), fmt, args);
 	packetHeader->type = PacketHeader::cPacketType_Log;
 	packetHeader->size = len;
@@ -344,7 +344,7 @@ void Server::reportStageName(const sead::SafeString& stageName, s32 scenarioNo) 
 	if (server->mState != State::Connected) return;
 	if (stageName == "WorldMapStage") return;
 
-	auto nameLen = stageName.calcLength();
+	s32 nameLen = stageName.calcLength();
 
 	struct [[gnu::packed]] {
 		PacketHeader header;
@@ -394,6 +394,29 @@ void Server::disconnect() {
 	mState = State::Disconnected;
 	nn::socket::Close(mTCPSockFd);
 	tas::System::stopReplay();
+}
+
+void Server::handleStageChange(HakoniwaSequence* sequence) {
+	Server* server = instance();
+
+	bool has = true;
+	if (!server->changeStageInfo.mHasChangeStageInfo.compare_exchange_strong(has, false, std::memory_order_seq_cst, std::memory_order_relaxed)) return;
+	server->changeStageInfo.mHasChangeStageInfo = false;
+
+	if (server->changeStageInfo.mSimpleReload) {
+		Server::log("NOT restarting stage (todo: reloads)");
+		return;
+	}
+
+	Menu::log("changing to stage %s", server->changeStageInfo.mStageName.data());
+	GameDataHolder* gameDataHolder = sequence->mGameDataHolderAccessor;
+	ChangeStageInfo info(
+		gameDataHolder, server->changeStageInfo.mEntranceName.data(), server->changeStageInfo.mStageName.data(), server->changeStageInfo.mIsReturn,
+		server->changeStageInfo.mScenario, server->changeStageInfo.mSubScenario
+	);
+
+	GameDataFunction::tryChangeNextStage(gameDataHolder, &info);
+	Server::log("changing to stage %s", server->changeStageInfo.mStageName.data());
 }
 
 } // namespace cly
